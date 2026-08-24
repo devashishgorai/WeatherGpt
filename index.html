@@ -1,0 +1,4007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeatherGPT — Aapka Mausam, Aapki Bhasha</title>
+  <meta name="description" content="WeatherGPT: AI-powered conversational weather assistant for India in authentic native Indian scripts: Hindi (हिंदी), Bengali (বাংলা), Tamil (தமிழ்), Telugu (తెలుగు), Marathi (मराठी), and English." />
+  
+  <!-- Google Fonts: Inter + Authentic Indian Scripts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&family=Noto+Sans+Tamil:wght@400;500;700&family=Noto+Sans+Telugu:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ===== CSS RESET & DESIGN SYSTEM ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      /* Palette */
+      --primary: #1565C0;
+      --primary-light: #1976D2;
+      --primary-dark: #0D47A1;
+      --secondary: #0288D1;
+      --accent: #F57C00;
+      --accent-light: #FFB74D;
+      --success: #2E7D32;
+      --warning: #F9A825;
+      --danger: #C62828;
+      --navy: #1A237E;
+      --navy-light: #283593;
+      --navy-dark: #0D1B5E;
+      --bg: #F0F4F8;
+      --chat-bg: #FFFFFF;
+      --text: #1A1A2E;
+      --text-light: #546E7A;
+      --text-muted: #90A4AE;
+      --border: #E0E7EF;
+      --border-light: #F0F4F8;
+
+      /* Weather Background Tints */
+      --tint-sunny: #FFFDE7;
+      --tint-rainy: #E3F2FD;
+      --tint-stormy: #ECEFF1;
+      --tint-night: #E8EAF6;
+
+      /* Spacing (4px base) */
+      --sp-xs: 4px;
+      --sp-sm: 8px;
+      --sp-md: 16px;
+      --sp-lg: 24px;
+      --sp-xl: 32px;
+      --sp-2xl: 48px;
+
+      /* Radii */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-full: 9999px;
+
+      /* Shadows */
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.12);
+      --shadow-deep: 0 10px 35px rgba(0, 0, 0, 0.18);
+
+      /* Typography */
+      --font-family: 'Inter', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', system-ui, -apple-system, sans-serif;
+      --sidebar-width: 280px;
+
+      /* Transitions */
+      --anim-fast: 0.15s ease;
+      --anim-normal: 0.25s ease;
+      --anim-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    #root {
+      height: 100%;
+      width: 100%;
+    }
+
+    /* ===== SCROLLBARS ===== */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.18);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    /* ===== APP LAYOUT ===== */
+    .app-wrapper {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ===== LEFT SIDEBAR ===== */
+    .sidebar {
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
+      background: linear-gradient(180deg, var(--navy) 0%, var(--navy-dark) 100%);
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 90;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      transition: transform var(--anim-smooth);
+    }
+
+    /* Sidebar Brand */
+    .sidebar-brand {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .brand-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      font-size: 30px;
+      line-height: 1;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+    }
+
+    .brand-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #FFFFFF 20%, #90CAF9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-tagline {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.75);
+      margin-top: 4px;
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: 0.2px;
+    }
+
+    /* Sidebar Sections */
+    .sidebar-section {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .section-heading {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: rgba(255, 255, 255, 0.55);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Location Input */
+    .search-box {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .location-input {
+      width: 100%;
+      padding: 9px 12px 9px 32px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font-family);
+      outline: none;
+      transition: all var(--anim-fast);
+      font-weight: 500;
+    }
+
+    .location-input::placeholder {
+      color: #78909C;
+      font-weight: 400;
+    }
+
+    .location-input:focus {
+      background: #FFFFFF;
+      border-color: #64B5F6;
+      box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.25);
+    }
+
+    .detect-loc-btn {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px dashed rgba(255, 255, 255, 0.35);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--font-family);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all var(--anim-fast);
+      margin-bottom: 8px;
+    }
+
+    .detect-loc-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.6);
+      color: #FFFFFF;
+    }
+
+    .current-location-tag {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+      font-weight: 500;
+    }
+
+    .current-location-tag .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background: #4CAF50;
+      border-radius: 50%;
+      box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+      animation: pulseGreen 1.8s infinite;
+    }
+
+    @keyframes pulseGreen {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    }
+
+    .search-history-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .history-chip {
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius-full);
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all var(--anim-fast);
+    }
+
+    .history-chip:hover {
+      background: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Persona Grid */
+    .persona-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .persona-card {
+      padding: 10px 6px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: var(--font-family);
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--anim-fast);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      line-height: 1.2;
+    }
+
+    .persona-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .persona-card.active {
+      background: #FFFFFF;
+      border-color: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .persona-card-emoji {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    /* Language Selector */
+    .language-dropdown {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.09);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-family);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .language-dropdown option {
+      background: var(--navy-dark);
+      color: #FFFFFF;
+    }
+
+    /* Weather Widget (Sidebar Bottom) */
+    .sidebar-weather-widget {
+      padding: 16px 18px 20px;
+      margin-top: auto;
+      background: rgba(0, 0, 0, 0.15);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .widget-temp-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    .widget-temp-large {
+      font-size: 46px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+      background: linear-gradient(135deg, #FFFFFF 0%, #BBDEFB 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .widget-temp-feels {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .widget-condition-text {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.95);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+
+    .widget-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .widget-stat-box {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-sm);
+      padding: 7px 4px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+
+    .stat-lbl {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .widget-sun-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+
+    .widget-footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .widget-refresh-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.85);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all var(--anim-fast);
+    }
+
+    .widget-refresh-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
+    }
+
+    .widget-refresh-btn.spinning .spin-icon {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    .auto-refresh-countdown {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    /* Skeleton Loading Helper Classes */
+    .skeleton-block {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.05) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    .skel-temp { width: 55%; height: 44px; margin-bottom: 8px; }
+    .skel-cond { width: 75%; height: 16px; margin-bottom: 14px; }
+    .skel-stats { width: 100%; height: 50px; margin-bottom: 10px; }
+    .skel-sun { width: 100%; height: 24px; }
+
+    .weather-unavailable-msg {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: center;
+      padding: 16px 8px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      min-width: 0;
+      position: relative;
+    }
+
+    /* Top Alert Banner */
+    .alert-banner {
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 600;
+      animation: slideDown 0.3s ease;
+      z-index: 50;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .alert-banner.green {
+      background: linear-gradient(90deg, #E8F5E9 0%, #C8E6C9 100%);
+      color: #1B5E20;
+      border-bottom: 1px solid #A5D6A7;
+    }
+    .alert-banner.yellow {
+      background: linear-gradient(90deg, #FFF9C4 0%, #FFF59D 100%);
+      color: #F57F17;
+      border-bottom: 1px solid #FFF176;
+    }
+    .alert-banner.orange {
+      background: linear-gradient(90deg, #FFE0B2 0%, #FFCC80 100%);
+      color: #E65100;
+      border-bottom: 1px solid #FFB74D;
+    }
+    .alert-banner.red {
+      background: linear-gradient(90deg, #FFCDD2 0%, #EF9A9A 100%);
+      color: #B71C1C;
+      border-bottom: 1px solid #E57373;
+    }
+    .alert-banner.blue {
+      background: linear-gradient(90deg, #E3F2FD 0%, #BBDEFB 100%);
+      color: #0D47A1;
+      border-bottom: 1px solid #90CAF9;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .alert-text-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alert-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0.65;
+      color: inherit;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      transition: opacity var(--anim-fast);
+    }
+    .alert-close-btn:hover { opacity: 1; }
+
+    /* Header Bar */
+    .main-header {
+      padding: 12px 22px;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 40;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+    }
+
+    .header-left-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .header-city-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .header-condition-pill {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-light);
+    }
+
+    .api-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 600;
+      background: #E3F2FD;
+      color: var(--primary);
+      border: 1px solid #BBDEFB;
+    }
+
+    .api-badge.fallback {
+      background: #FFF3E0;
+      color: #E65100;
+      border-color: #FFE0B2;
+    }
+
+    .header-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #FFFFFF;
+      color: var(--text-light);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-family);
+      cursor: pointer;
+      transition: all var(--anim-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .header-btn:hover {
+      background: var(--bg);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .header-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #FFFFFF;
+    }
+
+    /* ===== CHAT MESSAGES AREA ===== */
+    .chat-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 22px;
+      transition: background-color 0.6s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-scroll-area.sunny { background-color: var(--tint-sunny); }
+    .chat-scroll-area.rainy { background-color: var(--tint-rainy); }
+    .chat-scroll-area.stormy { background-color: var(--tint-stormy); }
+    .chat-scroll-area.night { background-color: var(--tint-night); }
+    .chat-scroll-area.clear { background-color: var(--chat-bg); }
+
+    /* Welcome Empty State */
+    .welcome-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: auto 0;
+      padding: 20px 10px;
+      text-align: center;
+    }
+
+    .welcome-badge {
+      padding: 4px 14px;
+      background: #E3F2FD;
+      color: var(--primary);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .welcome-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    .welcome-subtitle {
+      font-size: 14px;
+      color: var(--text-light);
+      max-width: 580px;
+      margin-bottom: 28px;
+    }
+
+    .welcome-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 14px;
+      width: 100%;
+      max-width: 880px;
+    }
+
+    .welcome-example-card {
+      background: #FFFFFF;
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      text-align: left;
+      transition: all var(--anim-normal);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .welcome-example-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-elevated);
+      border-color: var(--primary);
+    }
+
+    .welcome-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .welcome-card-icon {
+      font-size: 22px;
+    }
+
+    .welcome-persona-tag {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      background: #E3F2FD;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+    }
+
+    .welcome-q-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .welcome-a-text {
+      font-size: 12px;
+      color: var(--text-light);
+      line-height: 1.45;
+    }
+
+    /* Message Rows */
+    .message-row {
+      display: flex;
+      margin-bottom: 18px;
+      animation: msgSlideUp 0.25s ease;
+    }
+
+    @keyframes msgSlideUp {
+      from { transform: translateY(12px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .message-row.user {
+      justify-content: flex-end;
+    }
+
+    .message-row.ai {
+      justify-content: flex-start;
+    }
+
+    .message-content-wrapper {
+      max-width: 76%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message-row.user .message-content-wrapper {
+      align-items: flex-end;
+    }
+
+    .message-bubble {
+      padding: 13px 18px;
+      font-size: 14px;
+      line-height: 1.6;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    .message-row.user .message-bubble {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #FFFFFF;
+      border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg);
+      box-shadow: 0 3px 10px rgba(21, 101, 192, 0.25);
+    }
+
+    .message-row.ai .message-bubble {
+      background: #FFFFFF;
+      color: var(--text);
+      border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) 4px;
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--border);
+    }
+
+    .message-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .message-source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 7px;
+      background: #ECEFF1;
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-light);
+    }
+
+    .message-actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .msg-action-chip {
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      background: #FFFFFF;
+      color: var(--text-light);
+      font-size: 11px;
+      font-weight: 500;
+      font-family: var(--font-family);
+      cursor: pointer;
+      transition: all var(--anim-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .msg-action-chip:hover {
+      background: var(--bg);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .assistant-extras-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .translation-box {
+      margin-top: 6px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: #F1F5F9;
+      border-left: 3.5px solid var(--primary);
+      font-size: 13px;
+      color: #1E293B;
+      animation: msgSlideUp 0.2s ease-out;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .translation-header {
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+      font-style: normal;
+    }
+
+    .translation-text {
+      white-space: pre-line;
+      line-height: 1.55;
+      color: #2C3E50;
+      font-style: normal;
+    }
+
+    /* Typing Indicator */
+    .typing-indicator-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0 16px;
+      animation: msgSlideUp 0.2s ease;
+    }
+
+    .typing-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 16px;
+      background: #FFFFFF;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--border);
+    }
+
+    .typing-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: typingBounce 1.2s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    .typing-label {
+      font-size: 12px;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    /* Quick Chips */
+    .quick-chips-wrapper {
+      display: flex;
+      gap: 8px;
+      padding: 8px 22px;
+      overflow-x: auto;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-light);
+    }
+
+    .quick-chip-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      background: #FFFFFF;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--font-family);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--anim-fast);
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .quick-chip-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-card);
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #E3F2FD;
+    }
+
+    /* Input Bar */
+    .chat-input-bar {
+      padding: 12px 22px 14px;
+      background: #FFFFFF;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 30;
+    }
+
+    .input-inner-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    .message-textarea {
+      width: 100%;
+      padding: 12px 50px 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-size: 14px;
+      font-family: var(--font-family);
+      outline: none;
+      resize: none;
+      min-height: 44px;
+      max-height: 110px;
+      line-height: 1.5;
+      transition: border-color var(--anim-fast), background-color var(--anim-fast);
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .message-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .message-textarea:focus {
+      border-color: var(--primary);
+      background: #FFFFFF;
+    }
+
+    .char-limit-indicator {
+      position: absolute;
+      right: 12px;
+      bottom: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .char-limit-indicator.danger {
+      color: var(--danger);
+    }
+
+    .icon-round-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all var(--anim-fast);
+      flex-shrink: 0;
+    }
+
+    .mic-record-btn {
+      background: var(--bg);
+      color: var(--text-light);
+      border: 1px solid var(--border);
+    }
+
+    .mic-record-btn:hover {
+      background: #ECEFF1;
+      color: var(--primary);
+    }
+
+    .mic-record-btn.recording {
+      background: var(--danger);
+      color: #FFFFFF;
+      border-color: var(--danger);
+      animation: micPulseAnimation 1s infinite ease-in-out;
+    }
+
+    .mic-record-btn.processing {
+      background: var(--warning);
+      color: #FFFFFF;
+      border-color: var(--warning);
+    }
+
+    @keyframes micPulseAnimation {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.5); }
+      50% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(198, 40, 40, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(198, 40, 40, 0); }
+    }
+
+    .send-msg-btn {
+      background: var(--primary);
+      color: #FFFFFF;
+    }
+
+    .send-msg-btn:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: scale(1.04);
+    }
+
+    .send-msg-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* Forecast Panels */
+    .forecast-toggles-bar {
+      padding: 8px 22px;
+      background: #FFFFFF;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .toggle-forecast-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      background: #FFFFFF;
+      color: var(--text-light);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-family);
+      cursor: pointer;
+      transition: all var(--anim-fast);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .toggle-forecast-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .toggle-forecast-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      border-color: var(--primary);
+    }
+
+    .forecast-slider-container {
+      background: #FFFFFF;
+      border-top: 1px solid var(--border);
+      overflow-x: auto;
+      padding: 14px 22px;
+      display: flex;
+      gap: 12px;
+      animation: slideDown 0.25s ease;
+      flex-shrink: 0;
+    }
+
+    /* Daily Card */
+    .daily-forecast-card {
+      min-width: 124px;
+      padding: 12px 10px;
+      background: linear-gradient(135deg, #F8FAFC 0%, #EEF2F7 100%);
+      border-radius: var(--radius-md);
+      text-align: center;
+      border: 1px solid var(--border-light);
+      flex-shrink: 0;
+      transition: transform var(--anim-fast), box-shadow var(--anim-fast);
+    }
+
+    .daily-forecast-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-card);
+      border-color: #BBDEFB;
+    }
+
+    .daily-day-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .daily-emoji-icon {
+      font-size: 26px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .daily-temp-row {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .daily-min-temp {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-left: 2px;
+    }
+
+    .rain-bar-track {
+      height: 4px;
+      background: #E0E7EF;
+      border-radius: 2px;
+      margin: 8px 0 4px;
+      overflow: hidden;
+    }
+
+    .rain-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+    .rain-bar-fill.low { background: var(--secondary); }
+    .rain-bar-fill.med { background: var(--warning); }
+    .rain-bar-fill.high { background: var(--danger); }
+
+    .daily-subtext {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* Hourly Card */
+    .hourly-forecast-card {
+      min-width: 82px;
+      padding: 10px 8px;
+      background: linear-gradient(135deg, #F8FAFC 0%, #EEF2F7 100%);
+      border-radius: var(--radius-md);
+      text-align: center;
+      border: 1px solid var(--border-light);
+      flex-shrink: 0;
+    }
+
+    .hourly-time-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-light);
+      margin-bottom: 4px;
+    }
+
+    .hourly-emoji-icon {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .hourly-temp-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .hourly-rain-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--secondary);
+      margin-top: 3px;
+    }
+
+    /* Compare Modal */
+    .compare-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .compare-modal-box {
+      background: #FFFFFF;
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      width: 100%;
+      max-width: 840px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-deep);
+      animation: modalSlideIn 0.3s ease;
+    }
+
+    @keyframes modalSlideIn {
+      from { transform: scale(0.96) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .compare-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .compare-modal-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .compare-modal-close {
+      background: transparent;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+    }
+    .compare-modal-close:hover { color: var(--text); background: var(--bg); }
+
+    .compare-cities-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .compare-card {
+      padding: 18px;
+      background: var(--bg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+
+    .compare-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text);
+    }
+
+    .compare-search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .compare-search-input {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: var(--font-family);
+      outline: none;
+    }
+    .compare-search-input:focus { border-color: var(--primary); }
+
+    .compare-submit-btn {
+      padding: 9px 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--primary);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-family);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--anim-fast);
+    }
+    .compare-submit-btn:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+    .compare-submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .compare-quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+
+    .compare-quick-chip {
+      padding: 3px 9px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      background: #FFFFFF;
+      color: var(--text-light);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--anim-fast);
+    }
+    .compare-quick-chip:hover {
+      background: #E3F2FD;
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .compare-metric-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 13px;
+    }
+
+    .metric-label { color: var(--text-light); }
+    .metric-value { font-weight: 700; color: var(--text); }
+
+    .compare-loading-text {
+      color: var(--text-light);
+      font-size: 13px;
+      padding: 12px 0;
+      text-align: center;
+    }
+
+    .compare-hint-text {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    /* API Key Settings Modal */
+    .settings-modal-box {
+      background: #FFFFFF;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: var(--shadow-deep);
+    }
+
+    .settings-desc {
+      font-size: 13px;
+      color: var(--text-light);
+      margin-bottom: 12px;
+    }
+
+    .settings-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .settings-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: monospace;
+      margin: 8px 0 16px;
+      outline: none;
+    }
+    .settings-input:focus { border-color: var(--primary); }
+
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* Mobile Hamburger & Overlay */
+    .mobile-nav-toggle {
+      display: none;
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 150;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: var(--navy);
+      color: #FFFFFF;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: var(--shadow-elevated);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-backdrop-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 85;
+    }
+
+    /* Toast Notification */
+    .toast-notification {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #263238;
+      color: #FFFFFF;
+      padding: 8px 18px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-elevated);
+      z-index: 300;
+      animation: toastIn 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    @keyframes toastIn {
+      from { transform: translate(-50%, 20px); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+
+    /* ===== RESPONSIVE BREAKPOINTS ===== */
+    @media (max-width: 1024px) {
+      :root { --sidebar-width: 240px; }
+      .widget-temp-large { font-size: 38px; }
+      .welcome-cards-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 280px;
+        transform: translateX(-100%);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .mobile-nav-toggle { display: flex; }
+      .mobile-backdrop-overlay.active { display: block; }
+
+      .main-viewport { width: 100%; }
+      .main-header { padding-left: 58px; }
+      .message-content-wrapper { max-width: 88%; }
+      .compare-cities-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React 18, React-DOM, and HTM (via esm.sh CDN) -->
+  <script type="module">
+    import React, { useState, useEffect, useRef, useCallback, useMemo } from 'https://esm.sh/react@18';
+    import { createRoot } from 'https://esm.sh/react-dom@18/client';
+    import htm from 'https://esm.sh/htm@3';
+
+    const html = htm.bind(React.createElement);
+
+    /* ===== CONFIGURATION ===== */
+    const CONFIG = {
+      GOOGLE_API_KEY: "AIzaSyDdM4UyMFcKpOsmSP6us9bLN6mYwSYkruw",
+      CLAUDE_API_KEY: localStorage.getItem('weathergpt_claude_key') || "",
+      GEMINI_API_KEY: localStorage.getItem('weathergpt_gemini_key') || "",
+      OPENAI_API_KEY: localStorage.getItem('weathergpt_openai_key') || ""
+    };
+
+    /* ===== BUILT-IN INDIAN CITIES GEODATA ===== */
+    const INDIAN_CITIES_DB = {
+      'delhi': { city: 'New Delhi', lat: 28.6139, lng: 77.2090 },
+      'new delhi': { city: 'New Delhi', lat: 28.6139, lng: 77.2090 },
+      'mumbai': { city: 'Mumbai', lat: 19.0760, lng: 72.8777 },
+      'bombay': { city: 'Mumbai', lat: 19.0760, lng: 72.8777 },
+      'chennai': { city: 'Chennai', lat: 13.0827, lng: 80.2707 },
+      'madras': { city: 'Chennai', lat: 13.0827, lng: 80.2707 },
+      'kolkata': { city: 'Kolkata', lat: 22.5726, lng: 88.3639 },
+      'calcutta': { city: 'Kolkata', lat: 22.5726, lng: 88.3639 },
+      'bengaluru': { city: 'Bengaluru', lat: 12.9716, lng: 77.5946 },
+      'bangalore': { city: 'Bengaluru', lat: 12.9716, lng: 77.5946 },
+      'hyderabad': { city: 'Hyderabad', lat: 17.3850, lng: 78.4867 },
+      'ahmedabad': { city: 'Ahmedabad', lat: 23.0225, lng: 72.5714 },
+      'pune': { city: 'Pune', lat: 18.5204, lng: 73.8567 },
+      'jaipur': { city: 'Jaipur', lat: 26.9124, lng: 75.7873 },
+      'lucknow': { city: 'Lucknow', lat: 26.8467, lng: 80.9462 },
+      'surat': { city: 'Surat', lat: 21.1702, lng: 72.8311 },
+      'patna': { city: 'Patna', lat: 25.5941, lng: 85.1376 },
+      'bhopal': { city: 'Bhopal', lat: 23.2599, lng: 77.4126 },
+      'chandigarh': { city: 'Chandigarh', lat: 30.7333, lng: 76.7794 },
+      'kochi': { city: 'Kochi', lat: 9.9312, lng: 76.2673 },
+      'cochin': { city: 'Kochi', lat: 9.9312, lng: 76.2673 },
+      'varanasi': { city: 'Varanasi', lat: 25.3176, lng: 82.9739 },
+      'banaras': { city: 'Varanasi', lat: 25.3176, lng: 82.9739 },
+      'indore': { city: 'Indore', lat: 22.7196, lng: 75.8577 },
+      'nagpur': { city: 'Nagpur', lat: 21.1458, lng: 79.0882 },
+      'visakhapatnam': { city: 'Visakhapatnam', lat: 17.6868, lng: 83.2185 },
+      'vizag': { city: 'Visakhapatnam', lat: 17.6868, lng: 83.2185 },
+      'guwahati': { city: 'Guwahati', lat: 26.1445, lng: 91.7362 },
+      'shimla': { city: 'Shimla', lat: 31.1048, lng: 77.1734 },
+      'srinagar': { city: 'Srinagar', lat: 34.0837, lng: 74.7973 },
+      'bhubaneswar': { city: 'Bhubaneswar', lat: 20.2961, lng: 85.8245 },
+      'thiruvananthapuram': { city: 'Thiruvananthapuram', lat: 8.5241, lng: 76.9366 },
+      'trivandrum': { city: 'Thiruvananthapuram', lat: 8.5241, lng: 76.9366 },
+      'ranchi': { city: 'Ranchi', lat: 23.3441, lng: 85.3096 },
+      'dehradun': { city: 'Dehradun', lat: 30.3165, lng: 78.0322 },
+      'amritsar': { city: 'Amritsar', lat: 31.6340, lng: 74.8723 },
+      'goa': { city: 'Panaji (Goa)', lat: 15.4909, lng: 73.8278 },
+      'panaji': { city: 'Panaji (Goa)', lat: 15.4909, lng: 73.8278 },
+      'agra': { city: 'Agra', lat: 27.1767, lng: 78.0081 },
+      'kanpur': { city: 'Kanpur', lat: 26.4499, lng: 80.3319 },
+      'madurai': { city: 'Madurai', lat: 9.9252, lng: 78.1198 },
+      'coimbatore': { city: 'Coimbatore', lat: 11.0168, lng: 76.9558 },
+      'mysore': { city: 'Mysuru', lat: 12.2958, lng: 76.6394 },
+      'mysuru': { city: 'Mysuru', lat: 12.2958, lng: 76.6394 },
+      'mangalore': { city: 'Mangaluru', lat: 12.9141, lng: 74.8560 }
+    };
+
+    /* ===== COMPLETE NATIVE-SCRIPT UI LOCALIZATION DICTIONARY ===== */
+    const UI_I18N = {
+      hindi: {
+        tagline: '"आपका मौसम, आपकी भाषा"',
+        location: '📍 स्थान',
+        searchPlaceholder: 'शहर खोजें (उदा. दिल्ली, मुंबई)...',
+        detectLoc: '🎯 मेरा स्थान पहचानें',
+        detecting: '⏳ स्थान खोज रहे हैं...',
+        iAmA: 'मैं हूँ...',
+        personas: { farmer: '🌾 किसान', fisherman: '🎣 मछुआरा', disaster: '🚨 आपदा प्रबंधक', citizen: '👤 नागरिक' },
+        language: '🌐 भाषा',
+        humidity: 'नमी',
+        wind: 'हवा',
+        uv: 'यूवी',
+        sunrise: 'सूर्योदय',
+        sunset: 'सूर्यास्त',
+        feelsLike: 'अनुमान',
+        updated: 'अपडेट',
+        refresh: 'ताज़ा करें',
+        autoRefreshPrefix: 'स्वतः रिफ्रेश: ',
+        poweredByGoogle: '🌐 गूगल मौसम प्रणाली',
+        poweredByFallback: '📡 ओपन-मेटियो (विकल्प)',
+        compare: '⚖️ तुलना करें',
+        settings: '⚙️ सेटिंग्स',
+        clear: '🗑️ साफ़ करें',
+        welcomeBadge: 'नमस्ते एवं स्वागतम् 🙏',
+        welcomeTitle: 'WeatherGPT से अपनी भाषा में पूछें',
+        welcomeSubtitle: 'के लिए मौसम की ताज़ा जानकारी, फसल सलाह और सुरक्षा निर्देश।',
+        starters: [
+          { personaKey: 'farmer', title: 'किसान', emoji: '🌾', q: 'क्या आज फसल में पानी देना चाहिए?', a: 'आज 70% बारिश की संभावना है। खेत में सिंचाई रोकें और जल निकासी दुरुस्त रखें...' },
+          { personaKey: 'fisherman', title: 'मछुआरा', emoji: '🎣', q: 'क्या आज मछली पकड़ने जाना सुरक्षित है?', a: 'हवा की गति 35 किमी/घंटा है। तटीय क्षेत्रों में सावधानी बरतें। सुबह 6 से 9 बजे का समय सुरक्षित है...' },
+          { personaKey: 'disaster', title: 'आपदा प्रबंधक', emoji: '🚨', q: 'मुंबई में आज बाढ़ का क्या जोखिम है?', a: '🟠 नारंगी चेतावनी (ORANGE ALERT): अगले 24 घंटों में 150 मिमी+ भारी बारिश की संभावना है...' }
+        ],
+        chips: {
+          farmer: ['🌧️ आज बारिश होगी?', '💧 क्या सिंचाई सुरक्षित है?', '🌡️ फसल पर गर्मी का तनाव?', '📅 कटाई का सबसे अच्छा दिन?'],
+          fisherman: ['⛵ समुद्र में जाना सुरक्षित है?', '🌊 लहरों की स्थिति?', '🌀 चक्रवात की चेतावनी?', '💨 हवा की गति क्या है?'],
+          disaster: ['🚨 सक्रिय चेतावनियां?', '🌊 बाढ़ का जोखिम?', '🌡️ लू (हीटवेव) का स्तर?', '🌧️ पिछले 24 घंटे की बारिश?'],
+          citizen: ['☀️ आज का मौसम कैसा है?', '☂️ क्या छाता चाहिए?', '🏃 बाहर जाने के लिए ठीक है?', '📅 सप्ताहांत का मौसम?']
+        },
+        inputPlaceholder: 'मौसम, फसल, समुद्री सुरक्षा के बारे में पूछें...',
+        thinking: 'WeatherGPT सोच रहा है...',
+        listen: '🔊 सुनें',
+        stop: '⏹️ रोकें',
+        copy: '📋 कॉपी',
+        translate: '🌐 अंग्रेज़ी अनुवाद',
+        share: '📤 शेयर करें',
+        forecast7: '📅 7-दिन का पूर्वानुमान',
+        forecast24: '🕐 24-घंटे का पूर्वानुमान',
+        rainChance: 'बारिश',
+        compareTitle: '⚖️ शहरों के मौसम की तुलना',
+        compareCityCurrent: 'वर्तमान शहर',
+        compareCitySecond: 'तुलना के लिए शहर',
+        compareInputPlaceholder: 'दूसरा शहर दर्ज करें (उदा. मुंबई, चेन्नई)...',
+        compareBtn: '🔍 तुलना करें'
+      },
+
+      bengali: {
+        tagline: '"আপনার আবহাওয়া, আপনার ভাষা"',
+        location: '📍 অবস্থান',
+        searchPlaceholder: 'শহর খুঁজুন (যেমন: কলকাতা, ঢাকা)...',
+        detectLoc: '🎯 আমার অবস্থান শনাক্ত করুন',
+        detecting: '⏳ অবস্থান খোঁজা হচ্ছে...',
+        iAmA: 'আমি একজন...',
+        personas: { farmer: '🌾 কৃষক', fisherman: '🎣 জেলে', disaster: '🚨 দুর্যোগ ব্যবস্থাপক', citizen: '👤 নাগরিক' },
+        language: '🌐 ভাষা',
+        humidity: 'আর্দ্রতা',
+        wind: 'বাতাস',
+        uv: 'ইউভি',
+        sunrise: 'সূর্যোদয়',
+        sunset: 'সূর্যাস্ত',
+        feelsLike: 'অনুভূত',
+        updated: 'আপডেট',
+        refresh: 'রিফ্রেশ',
+        autoRefreshPrefix: 'স্বয়ংক্রিয় রিফ্রেশ: ',
+        poweredByGoogle: '🌐 গুগল আবহাওয়া সেবা',
+        poweredByFallback: '📡 ওপেন-মেটিও (বিকল্প)',
+        compare: '⚖️ তুলনা করুন',
+        settings: '⚙️ সেটিংস',
+        clear: '🗑️ মুছুন',
+        welcomeBadge: 'নমস্কার ও স্বাগতম 🙏',
+        welcomeTitle: 'WeatherGPT-কে বাংলায় জিজ্ঞাসা করুন',
+        welcomeSubtitle: '-এর জন্য রিয়েল-টাইম আবহাওয়া ও ব্যক্তিগত পরামর্শ।',
+        starters: [
+          { personaKey: 'farmer', title: 'কৃষক', emoji: '🌾', q: 'আজ কি ফসলে জল দেওয়া উচিত?', a: 'আজ ৭০% বৃষ্টির সম্ভাবনা রয়েছে। সেচ দেওয়া বন্ধ রাখুন এবং নিকাশী ব্যবস্থা ঠিক রাখুন...' },
+          { personaKey: 'fisherman', title: 'জেলে', emoji: '🎣', q: 'আজ কি মাছ ধরতে যাওয়া নিরাপদ?', a: 'বাতাসের গতিবেগ ৩৫ কিমি/ঘণ্টা। সমুদ্রে সতর্কতা অবলম্বন করুন। সকালের সময়টি বেশি নিরাপদ...' },
+          { personaKey: 'disaster', title: 'দুর্যোগ ব্যবস্থাপক', emoji: '🚨', q: 'আজ কলকাতায় বন্যার ঝুঁকি কতটা?', a: '🟠 কমলা সতর্কতা (ORANGE ALERT): ভারী বৃষ্টির পূর্বাভাস। নিচু এলাকাগুলোর জন্য সতর্কতা জারি...' }
+        ],
+        chips: {
+          farmer: ['🌧️ আজ কি বৃষ্টি হবে?', '💧 সেচ দেওয়া কি নিরাপদ?', '🌡️ ফসলে তাপপ্রবাহের ঝুঁকি?', '📅 ফসল কাটার সেরা দিন?'],
+          fisherman: ['⛵ সমুদ্রে যাওয়া কি নিরাপদ?', '🌊 সমুদ্রের অবস্থা কেমন?', '🌀 ঘূর্ণিঝড়ের সতর্কতা?', '💨 বাতাসের গতিবেগ কত?'],
+          disaster: ['🚨 সক্রিয় সতর্কতা?', '🌊 বন্যার ঝুঁকি?', '🌡️ তাপপ্রবাহের মাত্রা?', '🌧️ গত ২৪ ঘণ্টার বৃষ্টি?'],
+          citizen: ['☀️ আজকের আবহাওয়া কেমন?', '☂️ ছাতার প্রয়োজন আছে?', '🏃 বাইরে বের হওয়া যাবে?', '📅 ছুটির দিনের আবহাওয়া?']
+        },
+        inputPlaceholder: 'আবহাওয়া, ফসল বা সুরক্ষা সম্পর্কে জিজ্ঞাসা করুন...',
+        thinking: 'WeatherGPT ভাবছে...',
+        listen: '🔊 শুনুন',
+        stop: '⏹️ থামুন',
+        copy: '📋 কপি',
+        translate: '🌐 ইংরেজি অনুবাদ',
+        share: '📤 শেয়ার',
+        forecast7: '📅 ৭ দিনের পূর্বাভাস',
+        forecast24: '🕐 ২৪ ঘণ্টার পূর্বাভাস',
+        rainChance: 'বৃষ্টি',
+        compareTitle: '⚖️ আবহাওয়ার তুলনা',
+        compareCityCurrent: 'বর্তমান শহর',
+        compareCitySecond: 'দ্বিতীয় শহর',
+        compareInputPlaceholder: 'শহরের নাম লিখুন (যেমন: মুম্বাই, চেন্নাই)...',
+        compareBtn: '🔍 তুলনা'
+      },
+
+      tamil: {
+        tagline: '"உங்கள் வானிலை, உங்கள் மொழி"',
+        location: '📍 இருப்பிடம்',
+        searchPlaceholder: 'நகரத்தைத் தேடுங்கள் (எ.கா. சென்னை)...',
+        detectLoc: '🎯 என் இருப்பிடத்தைக் கண்டறி',
+        detecting: '⏳ இருப்பிடத்தைக் கண்டறிகிறது...',
+        iAmA: 'நான் ஒரு...',
+        personas: { farmer: '🌾 விவசாயி', fisherman: '🎣 மீனவர்', disaster: '🚨 பேரிடர் மேலாளர்', citizen: '👤 குடிமகன்' },
+        language: '🌐 மொழி',
+        humidity: 'ஈரப்பதம்',
+        wind: 'காற்று',
+        uv: 'யுவி',
+        sunrise: 'சூரியோதயம்',
+        sunset: 'சூரிய அஸ்தமனம்',
+        feelsLike: 'உணரப்படுவது',
+        updated: 'புதுப்பிக்கப்பட்டது',
+        refresh: 'புதுப்பி',
+        autoRefreshPrefix: 'தானியங்கி புதுப்பிப்பு: ',
+        poweredByGoogle: '🌐 கூகிள் வானிலை சேவை',
+        poweredByFallback: '📡 ஓபன்-மெட்டியோ (மாற்று)',
+        compare: '⚖️ ஒப்பிடு',
+        settings: '⚙️ அமைப்புகள்',
+        clear: '🗑️ அழி',
+        welcomeBadge: 'வணக்கம், நல்வரவு 🙏',
+        welcomeTitle: 'WeatherGPT-யிடம் தமிழில் கேளுங்கள்',
+        welcomeSubtitle: 'நகரத்திற்கான நேரடி வானிலை தகவல் மற்றும் துல்லியமான ஆலோசனைகள்.',
+        starters: [
+          { personaKey: 'farmer', title: 'விவசாயி', emoji: '🌾', q: 'இன்று பயிர்களுக்கு தண்ணீர் பாய்ச்ச வேண்டுமா?', a: 'இன்று 70% மழை பெய்ய வாய்ப்புள்ளது. பாசனத்தைத் தவிர்த்து வடிகால் அமைப்பைச் சரிபார்க்கவும்...' },
+          { personaKey: 'fisherman', title: 'மீனவர்', emoji: '🎣', q: 'இன்று கடலுக்கு மீன்பிடிக்க செல்லலாமா?', a: 'காற்றின் வேகம் 35 கிமீ/மணி. கடலில் எச்சரிக்கையுடன் இருக்கவும். காலை வேளை சிறந்தது...' },
+          { personaKey: 'disaster', title: 'பேரிடர் மேலாளர்', emoji: '🚨', q: 'இன்று வெள்ள அபாயம் உள்ளதா?', a: '🟠 ஆரஞ்சு எச்சரிக்கை (ORANGE ALERT): அடுத்த 24 மணிநேரத்தில் கனமழை எதிர்பார்க்கப்படுகிறது...' }
+        ],
+        chips: {
+          farmer: ['🌧️ இன்று மழை வருமா?', '💧 பாசனம் செய்யலாமா?', '🌡️ பயிர் வெப்ப அழுத்தம்?', '📅 அறுவடைக்கு சிறந்த நாள்?'],
+          fisherman: ['⛵ கடலுக்கு செல்லலாமா?', '🌊 கடல் நிலைமை?', '🌀 புயல் எச்சரிக்கை?', '💨 காற்றின் வேகம்?'],
+          disaster: ['🚨 தற்போதைய எச்சரிக்கைகள்?', '🌊 வெள்ள அபாயம்?', '🌡️ வெப்ப அலை குறியீடு?', '🌧️ கடந்த 24 மணிநேர மழை?'],
+          citizen: ['☀️ இன்றைய வானிலை?', '☂️ குடை தேவையா?', '🏃 வெளியில் செல்லலாமா?', '📅 வார இறுதி வானிலை?']
+        },
+        inputPlaceholder: 'வானிலை, விவசாயம் அல்லது பாதுகாப்பு பற்றி கேளுங்கள்...',
+        thinking: 'WeatherGPT பதிலளிக்கிறது...',
+        listen: '🔊 கேள்',
+        stop: '⏹️ நிறுத்து',
+        copy: '📋 நகலெடு',
+        translate: '🌐 ஆங்கில மொழிபெயர்ப்பு',
+        share: '📤 பகிர்',
+        forecast7: '📅 7-நாள் முன்னறிவிப்பு',
+        forecast24: '🕐 24-மணிநேர முன்னறிவிப்பு',
+        rainChance: 'மழை',
+        compareTitle: '⚖️ வானிலை ஒப்பீடு',
+        compareCityCurrent: 'தற்போதைய நகரம்',
+        compareCitySecond: 'ஒப்பிட வேண்டிய நகரம்',
+        compareInputPlaceholder: 'நகரத்தின் பெயரை உள்ளிடவும் (எ.கா. மும்பை)...',
+        compareBtn: '🔍 ஒப்பிடு'
+      },
+
+      telugu: {
+        tagline: '"మీ వాతావరణం, మీ భాష"',
+        location: '📍 ప్రాంతం',
+        searchPlaceholder: 'నగరాన్ని శోధించండి (ఉదా. హైదరాబాద్)...',
+        detectLoc: '🎯 నా స్థానాన్ని గుర్తించు',
+        detecting: '⏳ స్థానాన్ని శోధిస్తోంది...',
+        iAmA: 'నేను ఒక...',
+        personas: { farmer: '🌾 రైతు', fisherman: '🎣 మత్స్యకారుడు', disaster: '🚨 విపత్తు నిర్వాహకుడు', citizen: '👤 పౌరుడు' },
+        language: '🌐 భాష',
+        humidity: 'తేమ',
+        wind: 'గాలి',
+        uv: 'యువి',
+        sunrise: 'సూర్యోదయం',
+        sunset: 'సూర్యాస్తమయం',
+        feelsLike: 'అనిపించేది',
+        updated: 'నవీకరించబడింది',
+        refresh: 'రిఫ్రెష్',
+        autoRefreshPrefix: 'ఆటో రిఫ్రెష్: ',
+        poweredByGoogle: '🌐 గూగుల్ వాతావరణం',
+        poweredByFallback: '📡 ఓపెన్-మెటియో (ప్రత్యామ్నాయం)',
+        compare: '⚖️ పోల్చండి',
+        settings: '⚙️ సెట్టింగ్‌లు',
+        clear: '🗑️ క్లియర్',
+        welcomeBadge: 'నమస్కారం, స్వాగతం 🙏',
+        welcomeTitle: 'WeatherGPT ని తెలుగులో అడగండి',
+        welcomeSubtitle: 'కోసం ప్రత్యక్ష వాతావరణ సమాచారం మరియు వ్యవసాయ భద్రతా సలహాలు.',
+        starters: [
+          { personaKey: 'farmer', title: 'రైతు', emoji: '🌾', q: 'ఈరోజు పంటకు నీరు పెట్టవచ్చా?', a: 'ఈరోజు 70% వర్షం పడే అవకాశం ఉంది. నీటిపారుదల నిలిపివేసి, డ్రైనేజీని తనిఖీ చేయండి...' },
+          { personaKey: 'fisherman', title: 'మత్స్యకారుడు', emoji: '🎣', q: 'ఈరోజు చేపల వేటకు వెళ్లడం సురక్షితమేనా?', a: 'గాలి వేగం గంటకు 35 కి.మీ. జాగ్రత్త వహించండి. ఉదయం సమయం అనుకూలంగా ఉంటుంది...' },
+          { personaKey: 'disaster', title: 'విపత్తు నిర్వాహకుడు', emoji: '🚨', q: 'ఈరోజు వరద ముప్పు ఎంతవరకు ఉంది?', a: '🟠 ఆరెంజ్ అలర్ట్ (ORANGE ALERT): వచ్చే 24 గంటల్లో భారీ వర్షాలు కురిసే అవకాశం ఉంది...' }
+        ],
+        chips: {
+          farmer: ['🌧️ ఈరోజు వర్షం పడుతుందా?', '💧 నీరు పెట్టడం సురక్షితమేనా?', '🌡️ పంటలపై వేడి ప్రభావం?', '📅 కోతకు ఉత్తమ రోజు?'],
+          fisherman: ['⛵ సముద్రంలోకి వెళ్లవచ్చా?', '🌊 సముద్ర పరిస్థితులు?', '🌀 తుఫాను హెచ్చరిక?', '💨 గాలి వేగం ఎంత?'],
+          disaster: ['🚨 హెచ్చరికలు ఉన్నాయా?', '🌊 వరద ముప్పు?', '🌡️ వేడి తరంగం సూచిక?', '🌧️ గత 24 గంటల వర్షపాతం?'],
+          citizen: ['☀️ నేటి వాతావరణం?', '☂️ గొడుగు అవసరమా?', '🏃 బయటకు వెళ్లవచ్చా?', '📅 వారాంతపు వాతావరణం?']
+        },
+        inputPlaceholder: 'వాతావరణం, పంటలు లేదా భద్రత గురించి అడగండి...',
+        thinking: 'WeatherGPT ఆలోచిస్తోంది...',
+        listen: '🔊 వినండి',
+        stop: '⏹️ ఆపండి',
+        copy: '📋 కాపీ',
+        translate: '🌐 ఆంగ్ల అనువాదం',
+        share: '📤 షేర్',
+        forecast7: '📅 7-రోజుల సూచన',
+        forecast24: '🕐 24-గంటల సూచన',
+        rainChance: 'వర్షం',
+        compareTitle: '⚖️ వాతావరణ పోలిక',
+        compareCityCurrent: 'ప్రస్తుత నగరం',
+        compareCitySecond: 'పోల్చవలసిన నగరం',
+        compareInputPlaceholder: 'నగరం పేరు నమోదు చేయండి (ఉదా. ముంబై)...',
+        compareBtn: '🔍 పోల్చు'
+      },
+
+      marathi: {
+        tagline: '"तुमचे हवामान, तुमची भाषा"',
+        location: '📍 स्थान',
+        searchPlaceholder: 'शहर शोधा (उदा. पुणे, मुंबई)...',
+        detectLoc: '🎯 माझे स्थान शोधा',
+        detecting: '⏳ स्थान शोधत आहे...',
+        iAmA: 'मी एक...',
+        personas: { farmer: '🌾 शेतकरी', fisherman: '🎣 मासेमार', disaster: '🚨 आपत्ती व्यवस्थापक', citizen: '👤 नागरिक' },
+        language: '🌐 भाषा',
+        humidity: 'आर्द्रता',
+        wind: 'वारा',
+        uv: 'यूव्ही',
+        sunrise: 'सूर्योदय',
+        sunset: 'सूर्यास्त',
+        feelsLike: 'अनुभव',
+        updated: 'अपडेट झाले',
+        refresh: 'रिफ्रेश',
+        autoRefreshPrefix: 'स्वयं रिफ्रेश: ',
+        poweredByGoogle: '🌐 गुगल हवामान सेवा',
+        poweredByFallback: '📡 ओपन-मेटिओ (पर्याय)',
+        compare: '⚖️ तुलना करा',
+        settings: '⚙️ सेटिंग्ज',
+        clear: '🗑️ साफ करा',
+        welcomeBadge: 'नमस्कार, स्वागत आहे 🙏',
+        welcomeTitle: 'WeatherGPT ला मराठीत विचारा',
+        welcomeSubtitle: 'साठी थेट हवामान माहिती, शेती सल्ला आणि सुरक्षा इशारे.',
+        starters: [
+          { personaKey: 'farmer', title: 'शेतकरी', emoji: '🌾', q: 'आज पिकाला पाणी द्यावे का?', a: 'आज ७०% पावसाची शक्यता आहे. पिकाला पाणी देणे टाळा आणि शेतातील निचरा तपासा...' },
+          { personaKey: 'fisherman', title: 'मासेमार', emoji: '🎣', q: 'आज समुद्रात मासेमारीसाठी जाणे सुरक्षित आहे का?', a: 'वाऱ्याचा वेग ३५ किमी/तास आहे. किनारपट्टीवर काळजी घ्या. सकाळची वेळ अधिक योग्य आहे...' },
+          { personaKey: 'disaster', title: 'आपत्ती व्यवस्थापक', emoji: '🚨', q: 'आज मुंबईत पुराचा धोका किती आहे?', a: '🟠 ऑरेंज अलर्ट (ORANGE ALERT): पुढील २४ तासांत मुसळधार पावसाची शक्यता आहे...' }
+        ],
+        chips: {
+          farmer: ['🌧️ आज पाऊस पडेल का?', '💧 पाणी देणे सुरक्षित आहे का?', '🌡️ पिकावर उन्हाचा ताण?', '📅 कापणीसाठी उत्तम दिवस?'],
+          fisherman: ['⛵ समुद्रात जाणे सुरक्षित आहे?', '🌊 समुद्राची स्थिती?', '🌀 चक्रीवादळाचा इशारा?', '💨 वाऱ्याचा वेग किती?'],
+          disaster: ['🚨 सक्रिय इशारे?', '🌊 पुराचा धोका?', '🌡️ उष्णतेची लाट?', '🌧️ गेल्या २४ तासांतील पाऊस?'],
+          citizen: ['☀️ आजचे हवामान कसे आहे?', '☂️ छत्रीची गरज आहे का?', '🏃 बाहेर जाणे योग्य आहे का?', '📅 वीकेंडचे हवामान?']
+        },
+        inputPlaceholder: 'हवामान, पिके किंवा सुरक्षिततेबद्दल विचारा...',
+        thinking: 'WeatherGPT विचार करत आहे...',
+        listen: '🔊 ऐका',
+        stop: '⏹️ थांबवा',
+        copy: '📋 कॉपी',
+        translate: '🌐 इंग्रजी भाषांतर',
+        share: '📤 शेअर करा',
+        forecast7: '📅 ७ दिवसांचा अंदाज',
+        forecast24: '🕐 २४ तासांचा अंदाज',
+        rainChance: 'पाऊस',
+        compareTitle: '⚖️ हवामानाची तुलना',
+        compareCityCurrent: 'सध्याचे शहर',
+        compareCitySecond: 'तुलना करायचे शहर',
+        compareInputPlaceholder: 'दुसऱ्या शहराचे नाव टाका (उदा. मुंबई)...',
+        compareBtn: '🔍 तुलना'
+      },
+
+      english: {
+        tagline: '"Aapka Mausam, Aapki Bhasha"',
+        location: '📍 Location',
+        searchPlaceholder: 'Search city (e.g. Pune, Mumbai)...',
+        detectLoc: '🎯 Detect My Location',
+        detecting: '⏳ Detecting Location...',
+        iAmA: 'I am a...',
+        personas: { farmer: '🌾 Farmer', fisherman: '🎣 Fisherman', disaster: '🚨 Disaster Mgr', citizen: '👤 Citizen' },
+        language: '🌐 Language',
+        humidity: 'Humidity',
+        wind: 'Wind',
+        uv: 'UV',
+        sunrise: 'Sunrise',
+        sunset: 'Sunset',
+        feelsLike: 'Feels',
+        updated: 'Updated',
+        refresh: 'Refresh',
+        autoRefreshPrefix: 'Auto-refreshes in: ',
+        poweredByGoogle: '🌐 Powered by Google Weather API',
+        poweredByFallback: '📡 Open-Meteo (Fallback)',
+        compare: '⚖️ Compare',
+        settings: '⚙️ API Key',
+        clear: '🗑️ Clear',
+        welcomeBadge: 'Namaste & Welcome 🙏',
+        welcomeTitle: 'Ask WeatherGPT in English',
+        welcomeSubtitle: 'Real-time weather insights, farming advisories, marine safety, and alerts for',
+        starters: [
+          { personaKey: 'farmer', title: 'Farmer', emoji: '🌾', q: 'Should I irrigate my crops today?', a: '70% rain probability detected. Hold irrigation and ensure proper field drainage...' },
+          { personaKey: 'fisherman', title: 'Fisherman', emoji: '🎣', q: 'Is it safe to go fishing in the sea today?', a: 'Wind speed is 35 km/h. Exercise coastal caution. Best fishing window is 6 AM to 9 AM...' },
+          { personaKey: 'disaster', title: 'Disaster Manager', emoji: '🚨', q: 'What is the flood risk for Mumbai today?', a: '🟠 ORANGE ALERT: Heavy rainfall expected. 150mm+ precipitation likely in next 24 hours...' }
+        ],
+        chips: {
+          farmer: ['🌧️ Rain today?', '💧 Safe to irrigate?', '🌡️ Crop heat stress?', '📅 Best harvest day?'],
+          fisherman: ['⛵ Safe to sail?', '🌊 Sea conditions?', '🌀 Cyclone warning?', '💨 Wind speed?'],
+          disaster: ['🚨 Active alerts?', '🌊 Flood risk?', '🌡️ Heatwave index?', '🌧️ Last 24hr rain?'],
+          citizen: ['☀️ Today\'s forecast?', '☂️ Need umbrella?', '🏃 Good for outdoors?', '📅 Weekend weather?']
+        },
+        inputPlaceholder: 'Ask WeatherGPT about weather, crops, marine safety...',
+        thinking: 'WeatherGPT is thinking...',
+        listen: '🔊 Listen',
+        stop: '⏹️ Stop',
+        copy: '📋 Copy',
+        translate: '🌐 Translate',
+        share: '📤 Share',
+        forecast7: '📅 7-Day Forecast',
+        forecast24: '🕐 24-Hour Forecast',
+        rainChance: 'rain',
+        compareTitle: '⚖️ Side-by-Side Weather Comparison',
+        compareCityCurrent: 'Current City',
+        compareCitySecond: 'Compare With City',
+        compareInputPlaceholder: 'Enter city (e.g. Mumbai, Chennai)...',
+        compareBtn: '🔍 Compare'
+      }
+    };
+
+    const LANG_CODES = {
+      hindi: 'hi-IN',
+      bengali: 'bn-IN',
+      tamil: 'ta-IN',
+      telugu: 'te-IN',
+      marathi: 'mr-IN',
+      english: 'en-IN'
+    };
+
+    const LANG_OPTIONS = {
+      hindi: '🇮🇳 Hindi (हिंदी)',
+      bengali: '🇮🇳 Bengali (বাংলা)',
+      tamil: '🇮🇳 Tamil (தமிழ்)',
+      telugu: '🇮🇳 Telugu (తెలుగు)',
+      marathi: '🇮🇳 Marathi (मराठी)',
+      english: '🇬🇧 English'
+    };
+
+    const PERSONA_CONFIG = {
+      farmer: { emoji: '🌾', key: 'farmer' },
+      fisherman: { emoji: '🎣', key: 'fisherman' },
+      disaster: { emoji: '🚨', key: 'disaster' },
+      citizen: { emoji: '👤', key: 'citizen' }
+    };
+
+    const WMO_WEATHER_TABLE = {
+      0: { desc: 'Clear sky', emoji: '☀️' },
+      1: { desc: 'Mainly clear', emoji: '🌤️' },
+      2: { desc: 'Partly cloudy', emoji: '⛅' },
+      3: { desc: 'Overcast', emoji: '☁️' },
+      45: { desc: 'Fog', emoji: '🌫️' },
+      48: { desc: 'Depositing rime fog', emoji: '🌫️' },
+      51: { desc: 'Light drizzle', emoji: '🌦️' },
+      53: { desc: 'Moderate drizzle', emoji: '🌦️' },
+      55: { desc: 'Dense drizzle', emoji: '🌧️' },
+      61: { desc: 'Slight rain', emoji: '🌧️' },
+      63: { desc: 'Moderate rain', emoji: '🌧️' },
+      65: { desc: 'Heavy rain', emoji: '🌧️' },
+      71: { desc: 'Slight snow', emoji: '🌨️' },
+      73: { desc: 'Moderate snow', emoji: '🌨️' },
+      75: { desc: 'Heavy snow', emoji: '🌨️' },
+      80: { desc: 'Slight rain showers', emoji: '🌦️' },
+      81: { desc: 'Moderate rain showers', emoji: '🌧️' },
+      82: { desc: 'Violent rain showers', emoji: '⛈️' },
+      95: { desc: 'Thunderstorm', emoji: '⛈️' },
+      96: { desc: 'Thunderstorm with hail', emoji: '⛈️' },
+      99: { desc: 'Severe thunderstorm', emoji: '⛈️' }
+    };
+
+    /* ===== HELPER FUNCTIONS ===== */
+    function getWmoData(code) {
+      return WMO_WEATHER_TABLE[code] || { desc: 'Variable weather', emoji: '🌤️' };
+    }
+
+    function getWeatherEmoji(description) {
+      if (!description) return '🌤️';
+      const d = description.toLowerCase();
+      if (d.includes('thunder') || d.includes('storm') || d.includes('lightning')) return '⛈️';
+      if (d.includes('heavy rain') || d.includes('downpour') || d.includes('torrential')) return '🌧️';
+      if (d.includes('rain') || d.includes('shower') || d.includes('drizzle')) return '🌦️';
+      if (d.includes('snow') || d.includes('sleet') || d.includes('blizzard')) return '🌨️';
+      if (d.includes('fog') || d.includes('mist') || d.includes('haze') || d.includes('smoke')) return '🌫️';
+      if (d.includes('overcast') || d.includes('cloud')) return '☁️';
+      if (d.includes('partly')) return '⛅';
+      if (d.includes('clear') || d.includes('sunny') || d.includes('fair')) return '☀️';
+      return '🌤️';
+    }
+
+    function getBackgroundTintClass(condition, isDaytime) {
+      if (!condition) return 'clear';
+      const c = condition.toLowerCase();
+      if (!isDaytime) return 'night';
+      if (c.includes('storm') || c.includes('thunder') || c.includes('cyclone')) return 'stormy';
+      if (c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return 'rainy';
+      if (c.includes('clear') || c.includes('sunny') || c.includes('fair')) return 'sunny';
+      return 'clear';
+    }
+
+    function formatClockTime(isoString) {
+      if (!isoString) return '--:--';
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
+      } catch {
+        return '--:--';
+      }
+    }
+
+    function formatHourLabel(isoString) {
+      if (!isoString) return '--';
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleTimeString('en-IN', { hour: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' });
+      } catch {
+        return '--';
+      }
+    }
+
+    function formatDayLabel(isoString, index, lang) {
+      if (index === 0) {
+        if (lang === 'hindi') return 'आज';
+        if (lang === 'bengali') return 'আজ';
+        if (lang === 'tamil') return 'இன்று';
+        if (lang === 'telugu') return 'నేడు';
+        if (lang === 'marathi') return 'आज';
+        return 'Today';
+      }
+      if (index === 1) {
+        if (lang === 'hindi') return 'कल';
+        if (lang === 'bengali') return 'আগামীকাল';
+        if (lang === 'tamil') return 'நாளை';
+        if (lang === 'telugu') return 'రేపు';
+        if (lang === 'marathi') return 'उद्या';
+        return 'Tomorrow';
+      }
+      try {
+        const d = new Date(isoString);
+        const locale = LANG_CODES[lang] || 'en-IN';
+        return d.toLocaleDateString(locale, { weekday: 'short' });
+      } catch {
+        return `Day ${index + 1}`;
+      }
+    }
+
+    function getElapsedTimeLabel(date, lang) {
+      if (!date) return '';
+      const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+      if (mins < 1) {
+        if (lang === 'hindi') return 'अभी-अभी';
+        if (lang === 'bengali') return 'এইমাত্র';
+        if (lang === 'tamil') return 'சற்று முன்';
+        if (lang === 'telugu') return 'ఇప్పుడే';
+        if (lang === 'marathi') return 'आत्ताच';
+        return 'Just now';
+      }
+      if (lang === 'hindi') return `${mins} मिनट पहले`;
+      if (lang === 'bengali') return `${mins} মিনিট আগে`;
+      if (lang === 'tamil') return `${mins} நிமிடங்களுக்கு முன்`;
+      if (lang === 'telugu') return `${mins} నిమిషాల క్రితం`;
+      if (lang === 'marathi') return `${mins} मिनिटांपूर्वी`;
+      return `${mins}m ago`;
+    }
+
+    function getCurrentTimestamp() {
+      return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    function degreesToCardinal(deg) {
+      if (deg === undefined || deg === null) return 'N/A';
+      const cardinals = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      return cardinals[Math.round(deg / 22.5) % 16];
+    }
+
+    /* ===== WEATHER DATA FORMATTER ===== */
+    function formatWeatherForPrompt(weather, forecast) {
+      const hourlySummary = (forecast.hourly || []).slice(0, 6).map(h => 
+        `  ${formatHourLabel(h.time)}: ${h.temp}°C, ${h.condition}, ${h.precipProb}% rain chance`
+      ).join('\n') || '  No hourly data available';
+
+      const dailySummary = (forecast.daily || []).map((d, idx) => 
+        `  Day ${idx+1}: ${d.maxTemp}°C / ${d.minTemp}°C, ${d.condition}, ${d.precipProb}% rain`
+      ).join('\n') || '  No daily data available';
+
+      const alertsSummary = (weather.alerts && weather.alerts.length > 0)
+        ? weather.alerts.map(a => `  ${a.severity || 'ALERT'}: ${a.headline || a.description}`).join('\n')
+        : '  No active weather alerts';
+
+      return `
+CURRENT CONDITIONS (${weather.city}):
+- Temperature: ${weather.temp}°C (Feels like ${weather.feelsLike}°C)
+- Condition: ${weather.condition}
+- Humidity: ${weather.humidity}%
+- Wind: ${weather.windSpeed} km/h from ${weather.windDirection}
+- UV Index: ${weather.uvIndex}
+- Visibility: ${weather.visibility} km
+- Time of day: ${weather.isDaytime ? 'Day' : 'Night'}
+
+24-HOUR OUTLOOK:
+${hourlySummary}
+
+7-DAY FORECAST:
+${dailySummary}
+
+ACTIVE ALERTS:
+${alertsSummary}
+      `.trim();
+    }
+
+    /* ===== SYSTEM PROMPT BUILDER FOR CLAUDE ===== */
+    function buildSystemPrompt(persona, language, weatherData) {
+      const langName = LANG_OPTIONS[language] || 'English';
+
+      const scriptInstructions = {
+        hindi: "Respond 100% in authentic Devanagari Hindi (शुद्ध एवं सरल हिंदी लिपि). NEVER write Hinglish/Romanized Hindi.",
+        bengali: "Respond 100% in authentic Bengali script (বাংলা লিপি). NEVER write Banglish/Romanized Bengali.",
+        tamil: "Respond 100% in authentic Tamil script (தமிழ் எழுத்து). NEVER write Tanglish/Romanized Tamil.",
+        telugu: "Respond 100% in authentic Telugu script (తెలుగు లిపి). NEVER write Telugish/Romanized Telugu.",
+        marathi: "Respond 100% in authentic Marathi Devanagari script (मराठी देवनागरी). NEVER write Romanized Marathi.",
+        english: "Respond in clear, professional English."
+      };
+
+      const baseScriptNotice = scriptInstructions[language] || scriptInstructions.english;
+
+      const dialectInstructions = language !== 'english' ? `
+CRITICAL LANGUAGE RULES:
+- The user may type in Romanized/transliterated form (e.g. Hinglish, Banglish, Tanglish, Tenglish). 
+- Example: "aj ki bristi hbe" means "আজ কি বৃষ্টি হবে?" in Bengali, "kal barish hogi kya" means "कल बारिश होगी क्या?" in Hindi.
+- You MUST detect the intent from such informal inputs and ALWAYS respond in the authentic native script (${langName}).
+- NEVER respond in Romanized text. ALWAYS use the native script characters.
+- Match the user's conversational tone — be warm, friendly, and natural like talking to a neighbor.
+` : '';
+
+      const personaPrompts = {
+        farmer: `You are WeatherGPT, an AI weather assistant for Indian farmers. 
+${baseScriptNotice}
+${dialectInstructions}
+Weather data for user location: ${weatherData}
+
+Your response style:
+- Start with: 1-line weather summary in simple words in the native script
+- Give: 2-3 specific farming recommendations
+- Mention: crop impact, irrigation need, pest risk from humidity, frost/heat stress
+- If rain > 70%: advise to delay outdoor farming
+- If UV > 8: warn about heat stress on crops
+- If wind > 30 kmph: warn about damage to crops
+- Max 120 words
+- Never use technical meteorology terms`,
+
+        fisherman: `You are WeatherGPT, an AI weather assistant for Indian fishermen.
+${baseScriptNotice}
+${dialectInstructions}
+Weather data for user location: ${weatherData}
+
+Your response style:
+- SAFETY FIRST: If wind > 25 knots (46 kmph) OR storm/cyclone detected → Start with a prominent bold warning in the native language (e.g. "⛔ समुद्र में न जाएं" / "⛔ সমুদ্রে যাবেন না" / "⛔ கடலுக்கு செல்ல வேண்டாம்" / "⛔ సముద్రంలోకి వెళ్లవద్దు" / "⛔ समुद्रात जाऊ नका")
+- Give: sea condition summary
+- Mention: wind speed in both kmph and knots
+- Suggest: best time window to fish today
+- If safe: give fishing advice (surface/deep)
+- Max 100 words
+- Be direct about safety, no ambiguity`,
+
+        disaster: `You are WeatherGPT, an AI assistant for Indian disaster management officials.
+Always respond in English regardless of setting.
+Weather data: ${weatherData}
+
+Your response style:
+- Start with IMD-style color code: 🟢 GREEN / 🟡 YELLOW / 🟠 ORANGE / 🔴 RED
+- Give: threat assessment in 2-3 sentences
+- List: recommended immediate actions (numbered)
+- Mention: vulnerable populations at risk
+- Include: evacuation advisory if RED alert
+- Use official NDMA/IMD terminology
+- Max 150 words`,
+
+        citizen: `You are WeatherGPT, a friendly AI weather assistant for everyday citizens.
+${baseScriptNotice}
+${dialectInstructions}
+Weather data: ${weatherData}
+
+Your response style:
+- Be conversational and warm in the native script
+- Answer their specific question first
+- Add: practical daily advice (umbrella, sunscreen, jacket etc.)
+- Suggest: good/bad for outdoor activities
+- Mention: best time of day for activities
+- Use simple relatable language
+- Add 1 relevant weather emoji
+- Max 80 words`
+      };
+
+      return personaPrompts[persona] || personaPrompts.citizen;
+    }
+
+    /* ===== SMART LOCAL ENGINE FALLBACK (100% Native Script) ===== */
+    function generateSmartLocalResponse(persona, language, weather, query, forecastData) {
+      const q = (query || '').toLowerCase();
+      const w = weather || { temp: 28, condition: 'Clear', city: 'Your Location', humidity: 55, windSpeed: 12, uvIndex: 5, feelsLike: 29, visibility: 10, windDirection: 'N' };
+      const fc = forecastData || { daily: [], hourly: [] };
+      const knots = Math.round(w.windSpeed / 1.852);
+      const isDangerousWind = w.windSpeed > 46 || knots > 25;
+      const isRainy = (w.condition || '').toLowerCase().includes('rain') || w.humidity > 75;
+
+      // Extract Tomorrow & Upcoming Rain Info from Forecast
+      const tom = (fc.daily && fc.daily.length > 1) ? fc.daily[1] : (fc.daily && fc.daily.length > 0 ? fc.daily[0] : { maxTemp: w.temp + 1, minTemp: Math.max(w.temp - 7, 18), condition: w.condition, precipProb: isRainy ? 60 : 15 });
+      const rainyDay = fc.daily && fc.daily.find ? fc.daily.find((d, idx) => idx > 0 && ((d.precipProb && d.precipProb >= 30) || (d.condition && d.condition.toLowerCase().includes('rain')))) : null;
+
+      /* ===== UNIVERSAL PRIORITY-ORDERED INTENT DETECTION ===== */
+      function detectIntent(q) {
+        // 1. GREETING
+        if (/^(hi|hello|hey|namaste|namaskar|vanakkam|namaskaram|kemon|kaise|kemcho|nomoskar)[\s!?.]*$/i.test(q)) return 'greeting';
+
+        // 2. WHEN / NEXT CHANCES OF RAIN (High Priority)
+        if (
+          /(next|kab|kobe|eppo|eppudu|kadhi|when|timing|chance|chances|aage|aane wale|upcoming).*(rain|barish|baarish|bristi|brishti|varsha|mazha|paus|varsham)/i.test(q) ||
+          /(rain|barish|baarish|bristi|brishti|varsha|mazha|paus|varsham).*(next|kab|kobe|eppo|eppudu|kadhi|when|timing|chance|chances|aage|aane wale|upcoming|date|day|batao|din)/i.test(q)
+        ) return 'when_rain';
+
+        // 3. TOMORROW FORECAST
+        if (/(kal|agamikal|naalai|repu|udya|tomorrow|next day)/i.test(q)) return 'tomorrow';
+
+        // 4. WEEKLY / 7-DAY FORECAST
+        if (/(week|saptah|hapta|7.?day|7.?din|weekend|shani|ravi|sunday|sat|aane wale hafte)/i.test(q)) return 'weekly';
+
+        // 5. TODAY'S RAIN / UMBRELLA
+        if (/rain|bristi|brishti|barish|baarish|varsha|mazha|paush|megh|jhoro|brsht|ame|malai|mazhai|malei|varsham|varshalu|paus|paoos|umbrella|chhata|chata|chhatri|छाता|छत्री|বৃষ্টি|ছাতা|மழை|குடை|వర్షం|గొడుగు|पाऊस|छत्री|बारिश/i.test(q)) return 'rain_today';
+
+        // 6. TEMPERATURE / HEAT / COLD
+        if (/temp|tapman|taapmaan|garmi|thanda|sardi|garam|cold|hot|heat|tapmatra|ushno|ushnota|veppam|veppa|night|raat/i.test(q)) return 'temperature';
+
+        // 7. IRRIGATION / CROPS / WATER
+        if (/irrigat|paani|pani|jol|jal|neer|neeru|water|sinchai|sech|pasanam|niruparnudal|crop|fasal|fosol|phasol|khet|jomi|payir|pantta|pik|sheti/i.test(q)) return 'irrigation';
+
+        // 8. SEA / FISHING / BOATS
+        if (/sea|samundar|sagar|samudra|kadal|fish|machhli|machh|maach|meen|meenu|chapa|matsya|boat|naav|nauka|sail|samudr/i.test(q)) return 'fishing';
+
+        // 9. WIND / STORM / CYCLONE
+        if (/wind|hawa|haowa|batas|batash|kaatru|gaali|gali|vaara|vayu|toofan|tufan|andhi|kal baisakhi|cyclone|storm|jhad|ঝড়|புயல்|తుఫాను|वादळ/i.test(q)) return 'wind';
+
+        // 10. OUTDOOR / WALKS / TRAVEL
+        if (/outdoor|outside|bahar|baire|bahire|veliye|bayata|baher|walk|travel|trip|ghumne/i.test(q)) return 'outdoor';
+
+        // 11. UV / SUN / SUNSCREEN
+        if (/uv|sunscreen|dhoop|rup|rod|veyil|endal|oon|sun/i.test(q)) return 'uv';
+
+        // 12. HUMIDITY / AQI / POLLUTION
+        if (/humidity|nami|aadrata|air|aqi|pollution|smog/i.test(q)) return 'humidity';
+
+        // 13. FLOOD / DISASTER
+        if (/flood|baadh|baan|banya|bonnya|vellam|varadha|vellapperu/i.test(q)) return 'flood';
+
+        // 14. ALERT / WARNING
+        if (/alert|warning|khotor|danger|bipod|bipatti|apatti|aapat/i.test(q)) return 'alert';
+
+        return 'general';
+      }
+
+      const intent = detectIntent(q);
+
+      /* ===== DISASTER PERSONA ===== */
+      if (persona === 'disaster') {
+        let code = '🟢 GREEN ALERT';
+        let assessment = `Routine weather conditions observed in ${w.city}. No hydrometeorological risk detected.`;
+        let actions = `1. Maintain standard NDMA/IMD monitoring protocols.\n2. Routine district emergency operation center (DEOC) status check.\n3. Ensure emergency response vehicles and pumps are tested.`;
+
+        if (w.temp > 42) {
+          code = '🔴 RED ALERT (SEVERE HEATWAVE)';
+          assessment = `Extreme temperature of ${w.temp}°C in ${w.city}. Severe heatwave conditions threatening vulnerable populations.`;
+          actions = `1. Activate District Heat Action Plan (HAP) immediately.\n2. Deploy public hydration stations and ORS kiosks in market areas.\n3. Issue advisory restricting direct sun exposure between 12 PM - 4 PM.`;
+        } else if (isDangerousWind || (w.condition && w.condition.toLowerCase().includes('storm'))) {
+          code = '🟠 ORANGE ALERT (HIGH WINDS & STORM)';
+          assessment = `High surface winds of ${w.windSpeed} km/h with squall/storm potential in ${w.city}. Structural hazards reported.`;
+          actions = `1. Alert SDRF and municipal drainage pumping stations.\n2. Inspect drainage pump stations in vulnerable zones.\n3. Remove temporary hoardings and clear fallen tree limbs from arterial roads.`;
+        } else if (w.humidity > 80 || isRainy) {
+          code = '🟡 YELLOW ALERT (HEAVY RAINFALL WATCH)';
+          assessment = `Atmospheric moisture at ${w.humidity}%. Elevated precipitation likelihood across ${w.city} catchment zones.`;
+          actions = `1. Keep field observation teams on 24-hr standby.\n2. Coordinate with irrigation authorities on reservoir levels.\n3. Issue traffic advisories for low-lying underpasses.`;
+        }
+
+        return `${code} — ${w.city.toUpperCase()}\n\nThreat Assessment: ${assessment}\n\nRecommended Immediate Actions:\n${actions}\n\nVulnerable Groups: Outdoor workers, elderly, and infants.`;
+      }
+
+      /* ===== MULTILINGUAL RESPONSE REPOSITORY ===== */
+      const R = {
+        hindi: {
+          greeting: () => `🙏 नमस्ते! मैं WeatherGPT हूँ।\n\n${w.city} में अभी तापमान ${w.temp}°C है और मौसम ${w.condition} बना हुआ है।\n\nआप मुझसे बारिश, कल का मौसम, 7-दिन का पूर्वानुमान, या खेती-किसानी से जुड़े सवाल पूछ सकते हैं!`,
+          when_rain: () => rainyDay
+            ? `🌧️ ${w.city} में बारिश के अगले आसार:\n\nआने वाले दिनों में (${rainyDay.date ? rainyDay.date.slice(5) : 'अगले 2-3 दिनों में'}) बारिश की ${rainyDay.precipProb || 40}% संभावना है।\n\nउस दिन मौसम ${rainyDay.condition} रहने का अनुमान है। बाकी दिनों में मौसम मुख्यतः शुष्क रहेगा। ☂️`
+            : `☀️ ${w.city} में अगले 5 से 7 दिनों तक बारिश की संभावना न के बराबर है।\n\nआसमान मुख्यतः साफ और मौसम शुष्क बना रहेगा। बारिश का कोई निकटवर्ती सिस्टम सक्रिय नहीं है। 👍`,
+          tomorrow: () => `📅 कल ${w.city} का मौसम पूर्वानुमान:\n\n🌡️ अधिकतम तापमान: ${tom.maxTemp || (w.temp + 1)}°C\n🌡️ न्यूनतम तापमान: ${tom.minTemp || (w.temp - 6)}°C\n☁️ मौसम की स्थिति: ${tom.condition || w.condition}\n💧 बारिश की संभावना: ${tom.precipProb || 15}%\n\n${(tom.precipProb || 0) > 40 ? 'कल बारिश के आसार हैं, बाहर जाते समय छाता साथ रखें!' : 'कल का मौसम सामान्य और अनुकूल रहेगा।'}` ,
+          weekly: () => `📊 ${w.city} का 7-दिवसीय मौसम दृष्टिकोण:\n\nतापमान ${Math.min(w.temp, tom.minTemp || 24)}°C से ${Math.max(w.temp + 2, tom.maxTemp || 35)}°C के बीच रहने का अनुमान है।\n${rainyDay ? `सप्ताह के दौरान ${rainyDay.condition} के साथ हल्की बारिश हो सकती है।` : 'पूरे सप्ताह मौसम मुख्यतः साफ और शुष्क बना रहेगा।'}\n\nअधिक विवरण के लिए नीचे "7-दिन का पूर्वानुमान" पैनल देखें।`,
+          rain_today: () => isRainy
+            ? `🌧️ हाँ! ${w.city} में आज बारिश होने की प्रबल संभावना है। नमी ${w.humidity}% है और बादल छाए हुए हैं।\n\n☂️ बाहर जाते समय छाता अवश्य साथ रखें!`
+            : `☀️ नहीं, ${w.city} में आज बारिश की संभावना बहुत कम है। नमी ${w.humidity}% और मौसम ${w.condition} है।\n\nआप बिना छाते के बेफ़िक्र होकर बाहर जा सकते हैं! 👍`,
+          temperature: () => `🌡️ ${w.city} में वर्तमान तापमान ${w.temp}°C है (महसूस: ${w.feelsLike}°C)।\n\n${w.temp > 38 ? '🔥 बहुत तेज गर्मी है! दोपहर 12 से 4 के बीच सीधी धूप से बचें और पर्याप्त पानी पिएं।' : w.temp > 30 ? '☀️ मौसम गर्म है, हल्के सूती कपड़े पहनें और हाइड्रेटेड रहें।' : w.temp < 15 ? '🧥 ठंड का असर है, गर्म कपड़े पहनकर ही बाहर निकलें।' : '😊 मौसम बहुत सुहावना और आरामदायक है!'}`,
+          irrigation: () => isRainy
+            ? `💧 नहीं! अभी फसलों में सिंचाई न करें। ${w.city} में नमी ${w.humidity}% है और बारिश के आसार हैं।\n\nखेतों में जल निकासी की व्यवस्था दुरुस्त रखें ताकि जलभराव न हो। 🌾`
+            : `💧 हाँ, आज फसलों में सिंचाई की जा सकती है! ${w.city} में मौसम ${w.condition} है।\n\nसिंचाई का सर्वोत्तम समय सुबह 6:00 से 9:00 बजे या शाम 5:00 बजे के बाद रहेगा। 🌾`,
+          fishing: () => isDangerousWind
+            ? `⛔ **समुद्र में न जाएं!** हवा की गति ${w.windSpeed} किमी/घंटा (${knots} समुद्री मील) है। समुद्र अशांत है और ऊंची लहरों का खतरा है। नावें तट पर ही बांधकर रखें। 🚫🌊`
+            : `🎣 ${w.city} तटीय क्षेत्र में मौसम सुरक्षित है। हवा की गति ${w.windSpeed} किमी/घंटा है।\n\nमछली पकड़ने का सर्वोत्तम समय सुबह 5:30 से 9:30 बजे तक है। ⛵`,
+          wind: () => `💨 ${w.city} में हवा की गति ${w.windSpeed} किमी/घंटा (${w.windDirection} दिशा से) है।\n\n${isDangerousWind ? '⚠️ तेज आंधी/तूफान की चेतावनी है, सुरक्षित स्थान पर रहें!' : w.windSpeed > 25 ? 'हवा कुछ तेज है।' : 'हवा की गति सामान्य और शांत है।'} 🍃`,
+          outdoor: () => `${getWeatherEmoji(w.condition)} ${w.city} में अभी मौसम ${w.condition} है, तापमान ${w.temp}°C।\n\n${isRainy ? '🌧️ बारिश के आसार हैं, छाता साथ रखें।' : w.temp > 38 ? '🔥 दोपहर में धूप तेज है, सुबह या शाम का समय बाहर जाने के लिए उत्तम है।' : '👍 मौसम बाहर जाने और सैर के लिए बहुत अच्छा है!'}`,
+          uv: () => `☀️ ${w.city} में UV सूचकांक ${w.uvIndex} है।\n\n${w.uvIndex > 8 ? '⚠️ UV बहुत अधिक है! सनस्क्रीन (SPF 30+) लगाएं, धूप का चश्मा और टोपी पहनें।' : 'UV सामान्य सीमा में है, सामान्य सावधानी पर्याप्त है।'} 🧴`,
+          humidity: () => `💧 ${w.city} में वायुमंडलीय नमी ${w.humidity}% और दृश्यता ${w.visibility} किमी है।\n\n${w.humidity > 75 ? 'हवा में काफी उमस है, पसीना अधिक आ सकता है।' : 'नमी का स्तर सामान्य और संतुलित है।'}`,
+          general: () => `${getWeatherEmoji(w.condition)} ${w.city} का संपूर्ण मौसम:\n\n🌡️ तापमान: ${w.temp}°C (महसूस: ${w.feelsLike}°C)\n💧 नमी: ${w.humidity}%\n💨 हवा: ${w.windSpeed} किमी/घंटा (${w.windDirection})\n☀️ UV: ${w.uvIndex}\n👁️ दृश्यता: ${w.visibility} किमी\n\n${isRainy ? '🌧️ बारिश हो सकती है, छाता रखें!' : '😊 मौसम अनुकूल बना हुआ है!'}`
+        },
+
+        bengali: {
+          greeting: () => `🙏 নমস্কার! আমি WeatherGPT।\n\n${w.city}-তে এখন তাপমাত্রা ${w.temp}°C এবং আবহাওয়া ${w.condition}।\n\nআপনি আমাকে বৃষ্টি, আগামীকালের পূর্বাভাস, বা ফসলের যত্ন সংক্রান্ত যেকোনো প্রশ্ন করতে পারেন!`,
+          when_rain: () => rainyDay
+            ? `🌧️ ${w.city}-তে পরবর্তী বৃষ্টির সম্ভাবনা:\n\nআসন্ন দিনগুলিতে (${rainyDay.date ? rainyDay.date.slice(5) : 'পরবর্তী ২-৩ দিনে'}) বৃষ্টির ${rainyDay.precipProb || 40}% সম্ভাবনা রয়েছে।\n\nআবহাওয়া ${rainyDay.condition} থাকবে। বাকি দিনগুলিতে আবহাওয়া মূলত শুষ্ক থাকবে। ☂️`
+            : `☀️ ${w.city}-তে আগামী ৫ থেকে ৭ দিনে বৃষ্টির সম্ভাবনা খুবই কম।\n\nআকাশ পরিষ্কার থাকবে এবং আবহাওয়া মূলত শুষ্ক থাকবে। 👍`,
+          tomorrow: () => `📅 আগামীকাল ${w.city}-র আবহাওয়ার পূর্বাভাস:\n\n🌡️ সর্বোচ্চ তাপমাত্রা: ${tom.maxTemp || (w.temp + 1)}°C\n🌡️ সর্বনিম্ন তাপমাত্রা: ${tom.minTemp || (w.temp - 6)}°C\n☁️ আবহাওয়া: ${tom.condition || w.condition}\n💧 বৃষ্টির সম্ভাবনা: ${tom.precipProb || 15}%\n\n${(tom.precipProb || 0) > 40 ? 'কাল বৃষ্টির সম্ভাবনা আছে, ছাতা সঙ্গে রাখুন!' : 'কাল আবহাওয়া অনুকূল থাকবে।'}` ,
+          weekly: () => `📊 ${w.city}-র ৭ দিনের আবহাওয়ার পূর্বাভাস:\n\nতাপমাত্রা ${Math.min(w.temp, tom.minTemp || 24)}°C থেকে ${Math.max(w.temp + 2, tom.maxTemp || 35)}°C এর মধ্যে থাকবে।\n${rainyDay ? 'সপ্তাহের মাঝে হালকা বৃষ্টির সম্ভাবনা রয়েছে।' : 'পুরো সপ্তাহ আবহাওয়া মূলত শুষ্ক ও রৌদ্রোজ্জ্বল থাকবে।'}\n\nবিস্তারিত জানতে নিচে "৭-দিনের পূর্বাভাস" দেখুন।`,
+          rain_today: () => isRainy
+            ? `🌧️ হ্যাঁ! ${w.city}-তে আজ বৃষ্টি হওয়ার প্রবল সম্ভাবনা রয়েছে। আর্দ্রতা ${w.humidity}%।\n\n☂️ বাইরে বেরোনোর সময় ছাতা সঙ্গে রাখুন!`
+            : `☀️ না, ${w.city}-তে আজ বৃষ্টির সম্ভাবনা খুবই কম। আর্দ্রতা ${w.humidity}% এবং আবহাওয়া ${w.condition}।\n\nনিশ্চিন্তে বাইরে যেতে পারেন! 👍`,
+          temperature: () => `🌡️ ${w.city}-তে বর্তমান তাপমাত্রা ${w.temp}°C (অনুভূত: ${w.feelsLike}°C)।\n\n${w.temp > 38 ? '🔥 প্রচণ্ড গরম! প্রচুর জল পান করুন এবং রোদ এড়িয়ে চলুন।' : w.temp > 30 ? '☀️ বেশ গরম, হালকা পোশাক পরুন।' : w.temp < 15 ? '🧥 ঠান্ডা পড়েছে, গরম জামাকাপড় পরুন।' : '😊 আবহাওয়া দারুণ ও আরামদায়ক!'}`,
+          irrigation: () => isRainy
+            ? `💧 না! এখন জমিতে সেচ দেবেন না। ${w.city}-তে আর্দ্রতা ${w.humidity}% এবং বৃষ্টির সম্ভাবনা আছে। নিকাশী নালা পরিষ্কার রাখুন। 🌾`
+            : `💧 হ্যাঁ, আজ সেচ দেওয়া যেতে পারে। সকাল ৬টা থেকে ৯টা বা বিকেল ৫টার পর সেচ দেওয়া সর্বোত্তম। 🌾`,
+          fishing: () => isDangerousWind
+            ? `⛔ **সমুদ্রে যাবেন না!** বাতাসের গতিবেগ ${w.windSpeed} কিমি/ঘণ্টা (${knots} নট)। উত্তাল ঢেউয়ের ঝুঁকি রয়েছে। সব নৌকা তীরেই রাখুন। 🚫🌊`
+            : `🎣 ${w.city} উপকূলে আবহাওয়া নিরাপদ। বাতাস ${w.windSpeed} কিমি/ঘণ্টা। সকাল ৫:৩০ থেকে ৯:৩০ মাছ ধরার সেরা সময়। ⛵`,
+          wind: () => `💨 ${w.city}-তে বাতাসের গতিবেগ ${w.windSpeed} কিমি/ঘণ্টা (${w.windDirection} দিক থেকে)। ${isDangerousWind ? '⚠️ সতর্ক থাকুন!' : 'বাতাস স্বাভাবিক।'} 🍃`,
+          outdoor: () => `${getWeatherEmoji(w.condition)} ${w.city}-তে আবহাওয়া ${w.condition}, তাপমাত্রা ${w.temp}°C। ${isRainy ? '🌧️ ছাতা নিয়ে বেরোন।' : '👍 বাইরে ঘোরার জন্য অনুকূল দিন!'}`,
+          uv: () => `☀️ ${w.city}-তে UV সূচক ${w.uvIndex}। ${w.uvIndex > 8 ? '⚠️ সানস্ক্রিন লাগান ও টুপি পরুন।' : 'UV স্বাভাবিক।'} 🧴`,
+          humidity: () => `💧 ${w.city}-তে বাতাসের আর্দ্রতা ${w.humidity}% এবং দৃশ্যমানতা ${w.visibility} কিমি।`,
+          general: () => `${getWeatherEmoji(w.condition)} ${w.city}-র আবহাওয়া:\n\n🌡️ তাপমাত্রা: ${w.temp}°C (অনুভূত: ${w.feelsLike}°C)\n💧 আর্দ্রতা: ${w.humidity}%\n💨 বাতাস: ${w.windSpeed} কিমি/ঘণ্টা (${w.windDirection})\n☀️ UV: ${w.uvIndex}\n\n${isRainy ? '🌧️ বৃষ্টি হতে পারে, ছাতা রাখুন!' : '😊 আবহাওয়া ভালো রয়েছে!'}`
+        },
+
+        tamil: {
+          greeting: () => `🙏 வணக்கம்! நான் WeatherGPT.\n\n${w.city} பகுதியில் தற்போது வெப்பநிலை ${w.temp}°C, வானிலை ${w.condition}.\n\nமழை, நாளைய வானிலை, பாசனம் பற்றி என்னிடம் கேட்கலாம்!`,
+          when_rain: () => rainyDay
+            ? `🌧️ ${w.city} பகுதியில் அடுத்த மழை வாய்ப்பு:\n\nஅடுத்த 2-3 நாட்களில் மழை பெய்ய ${rainyDay.precipProb || 40}% வாய்ப்புள்ளது. மற்ற நாட்களில் வானிலை சீராக இருக்கும். ☂️`
+            : `☀️ ${w.city} பகுதியில் அடுத்த 7 நாட்களுக்கு மழைக்கு வாய்ப்பில்லை. வானிலை வறண்டு காணப்படும். 👍`,
+          tomorrow: () => `📅 நாளை ${w.city} வானிலை:\n\n🌡️ அதிகபட்சம்: ${tom.maxTemp || (w.temp + 1)}°C | குறைந்தபட்சம்: ${tom.minTemp || (w.temp - 6)}°C\n☁️ நிலை: ${tom.condition || w.condition}\n💧 மழை வாய்ப்பு: ${tom.precipProb || 15}%`,
+          weekly: () => `📊 ${w.city} 7-நாள் வானிலை நிலவரம்:\n\nவெப்பநிலை ${Math.min(w.temp, tom.minTemp || 24)}°C முதல் ${Math.max(w.temp + 2, tom.maxTemp || 35)}°C வரை இருக்கும். வானிலை பெரும்பாலும் சீராக இருக்கும்.`,
+          rain_today: () => isRainy
+            ? `🌧️ ஆம்! ${w.city} பகுதியில் இன்று மழை பெய்ய வாய்ப்புள்ளது. ஈரப்பதம் ${w.humidity}%.\n\n☂️ வெளியே செல்லும்போது குடை எடுத்துச் செல்லுங்கள்!`
+            : `☀️ இல்லை, ${w.city} பகுதியில் இன்று மழைக்கு வாய்ப்பு குறைவு. ஈரப்பதம் ${w.humidity}%. குடை தேவையில்லை! 👍`,
+          temperature: () => `🌡️ ${w.city} பகுதியில் வெப்பநிலை ${w.temp}°C (உணரப்படுவது: ${w.feelsLike}°C).\n\n${w.temp > 38 ? '🔥 அதிக வெப்பம்! நிறைய தண்ணீர் குடியுங்கள்.' : '😊 வானிலை இதமாக உள்ளது.'}`,
+          irrigation: () => isRainy ? `💧 மழை வாய்ப்புள்ளதால் பாசனத்தைத் தவிர்க்கவும். 🌾` : `💧 ஆம், இன்று பாசனம் செய்யலாம். காலை அல்லது மாலை வேளை சிறந்தது. 🌾`,
+          fishing: () => isDangerousWind ? `⛔ **கடலுக்கு செல்ல வேண்டாம்!** காற்று வேகம் அதிகம். 🚫🌊` : `🎣 ${w.city} கடல் பகுதி பாதுகாப்பானது. காலை 5:30 - 9:30 சிறந்த நேரம். ⛵`,
+          wind: () => `💨 காற்றின் வேகம் மணிக்கு ${w.windSpeed} கி.மீ. 🍃`,
+          outdoor: () => `${getWeatherEmoji(w.condition)} வெளியே செல்ல வானிலை ${isRainy ? 'மழைக்கு வாய்ப்பு உள்ளது, குடை தேவை.' : 'நல்ல நிலையில் உள்ளது.'}`,
+          uv: () => `☀️ UV குறியீடு: ${w.uvIndex}. ${w.uvIndex > 8 ? 'சன்ஸ்கிரீன் பயன்படுத்தவும்.' : 'பாதுகாப்பானது.'} 🧴`,
+          humidity: () => `💧 ஈரப்பதம்: ${w.humidity}%, பார்வை தூரம்: ${w.visibility} கி.மீ.`,
+          general: () => `${getWeatherEmoji(w.condition)} ${w.city} வானிலை: ${w.temp}°C, ஈரப்பதம்: ${w.humidity}%, காற்று: ${w.windSpeed} கி.மீ/மணி.`
+        },
+
+        telugu: {
+          greeting: () => `🙏 నమస్కారం! నేను WeatherGPT.\n\n${w.city} లో ఇప్పుడు ఉష్ణోగ్రత ${w.temp}°C, వాతావరణం ${w.condition}.\n\nవర్షం, రేపటి వాతావరణం, పంటల గురించి నన్ను అడగండి!`,
+          when_rain: () => rainyDay
+            ? `🌧️ ${w.city} లో తదుపరి వర్ష సూచన:\n\nరాబోయే 2-3 రోజుల్లో వర్షం పడే అవకాశం ${rainyDay.precipProb || 40}% ఉంది. మిగిలిన రోజుల్లో వాతావరణం పొడిగా ఉంటుంది. ☂️`
+            : `☀️ ${w.city} లో రాబోయే 7 రోజుల్లో వర్షం పడే అవకాశం లేదు. వాతావరణం స్పష్టంగా ఉంటుంది. 👍`,
+          tomorrow: () => `📅 రేపు ${w.city} వాతావరణం:\n\n🌡️ గరిష్ట: ${tom.maxTemp || (w.temp + 1)}°C | కనిష్ట: ${tom.minTemp || (w.temp - 6)}°C\n☁️ పరిస్థితి: ${tom.condition || w.condition}\n💧 వర్ష అవకాశం: ${tom.precipProb || 15}%`,
+          weekly: () => `📊 ${w.city} 7 రోజుల వాతావరణ సమాచారం:\n\nఉష్ణోగ్రతలు ${Math.min(w.temp, tom.minTemp || 24)}°C నుండి ${Math.max(w.temp + 2, tom.maxTemp || 35)}°C వరకు నమోదవుతాయి.`,
+          rain_today: () => isRainy
+            ? `🌧️ అవును! ${w.city} లో నేడు వర్షం పడే అవకాశం ఉంది. తేమ ${w.humidity}%.\n\n☂️ గొడుగు తీసుకెళ్లండి!`
+            : `☀️ లేదు, నేడు వర్షం అవకాశం తక్కువ. తేమ ${w.humidity}%. ధైర్యంగా బయటకు వెళ్లవచ్చు! 👍`,
+          temperature: () => `🌡️ ప్రస్తుత ఉష్ణోగ్రత ${w.temp}°C (అనిపించేది: ${w.feelsLike}°C).\n\n${w.temp > 38 ? '🔥 ఎండ తీవ్రత ఎక్కువ! నీరు ఎక్కువగా తాగండి.' : '😊 ఆహ్లాదకరమైన వాతావరణం.'}`,
+          irrigation: () => isRainy ? `💧 వర్షం పడే అవకాశం ఉంది, నీటిపారుదల నిలిపివేయండి. 🌾` : `💧 అవును, నేడు పంటలకు నీరు పెట్టవచ్చు. ఉదయం లేదా సాయంత్రం వేళల్లో అనుకూలం. 🌾`,
+          fishing: () => isDangerousWind ? `⛔ **సముద్రంలోకి వెళ్లవద్దు!** గాలులు బలంగా ఉన్నాయి. 🚫🌊` : `🎣 తీర వాతావరణం అనుకూలంగా ఉంది. ఉదయం 5:30 - 9:30 మంచి సమయం. ⛵`,
+          wind: () => `💨 గాలి వేగం గంటకు ${w.windSpeed} కి.మీ. 🍃`,
+          outdoor: () => `${getWeatherEmoji(w.condition)} బయటకు వెళ్లడానికి వాతావరణం ${isRainy ? 'వర్షం రావచ్చు, జాగ్రత్త.' : 'అనుకూలంగా ఉంది.'}`,
+          uv: () => `☀️ UV సూచిక: ${w.uvIndex}. ${w.uvIndex > 8 ? 'సన్‌స్క్రీన్ వాడండి.' : 'సాధారణం.'} 🧴`,
+          humidity: () => `💧 తేమ: ${w.humidity}%, దృశ్యత: ${w.visibility} కి.మీ.`,
+          general: () => `${getWeatherEmoji(w.condition)} ${w.city} వాతావరణం: ${w.temp}°C, తేమ: ${w.humidity}%, గాలి: ${w.windSpeed} కి.మీ/గం.`
+        },
+
+        marathi: {
+          greeting: () => `🙏 नमस्कार! मी WeatherGPT आहे.\n\n${w.city} मध्ये सध्या तापमान ${w.temp}°C, हवामान ${w.condition}.\n\nपाऊस, उद्याचा अंदाज किंवा शेतीकामांबद्दल मला विचारा!`,
+          when_rain: () => rainyDay
+            ? `🌧️ ${w.city} मध्ये पुढील पावसाची शक्यता:\n\nयेत्या २-३ दिवसांत पाऊस पडण्याची ${rainyDay.precipProb || 40}% शक्यता आहे. उर्वरित दिवस हवामान प्रामुख्याने कोरडे राहील. ☂️`
+            : `☀️ ${w.city} मध्ये पुढील ७ दिवसांत पावसाची शक्यता खूपच कमी आहे. संपूर्ण आठवडा हवामान कोरडे व निरभ्र राहील. 👍`,
+          tomorrow: () => `📅 उद्याचा ${w.city} हवामान अंदाज:\n\n🌡️ कमाल तापमान: ${tom.maxTemp || (w.temp + 1)}°C | किमान: ${tom.minTemp || (w.temp - 6)}°C\n☁️ हवामान: ${tom.condition || w.condition}\n💧 पावसाची शक्यता: ${tom.precipProb || 15}%`,
+          weekly: () => `📊 ${w.city} चा ७ दिवसांचा हवामान अंदाज:\n\nतापमान ${Math.min(w.temp, tom.minTemp || 24)}°C ते ${Math.max(w.temp + 2, tom.maxTemp || 35)}°C दरम्यान राहील. हवामान सामान्यतः स्वच्छ राहील.`,
+          rain_today: () => isRainy
+            ? `🌧️ हो! ${w.city} मध्ये आज पाऊस पडण्याची दाट शक्यता आहे. आर्द्रता ${w.humidity}% आहे.\n\n☂️ बाहेर पडताना छत्री सोबत ठेवा!`
+            : `☀️ नाही, आज पावसाची शक्यता खूपच कमी आहे. आर्द्रता ${w.humidity}%. काळजी नसावी! 👍`,
+          temperature: () => `🌡️ सध्याचे तापमान ${w.temp}°C (अनुभव: ${w.feelsLike}°C).\n\n${w.temp > 38 ? '🔥 खूप ऊन आहे! भरपूर पाणी प्या.' : '😊 हवामान आल्हाददायक आहे.'}`,
+          irrigation: () => isRainy ? `💧 पाऊस येण्याची शक्यता असल्याने पिकांना पाणी देणे टाळा. 🌾` : `💧 हो, आज पिकांना पाणी देऊ शकता. सकाळची किंवा संध्याकाळची वेळ सर्वोत्तम. 🌾`,
+          fishing: () => isDangerousWind ? `⛔ **समुद्रात जाऊ नका!** वाऱ्याचा वेग जास्त आहे. 🚫🌊` : `🎣 किनारपट्टी हवामान सुरक्षित आहे. सकाळी ५:३০ - ९:३০ सर्वोत्तम वेळ. ⛵`,
+          wind: () => `💨 वाऱ्याचा वेग ताशी ${w.windSpeed} किमी. 🍃`,
+          outdoor: () => `${getWeatherEmoji(w.condition)} बाहेर जाण्यासाठी हवामान ${isRainy ? 'पावसाची शक्यता, छत्री ठेवा.' : 'छान आहे.'}`,
+          uv: () => `☀️ UV निर्देशांक: ${w.uvIndex}. 🧴`,
+          humidity: () => `💧 आर्द्रता: ${w.humidity}%, दृश्यमानता: ${w.visibility} किमी.`,
+          general: () => `${getWeatherEmoji(w.condition)} ${w.city} हवामान: ${w.temp}°C, आर्द्रता: ${w.humidity}%, वारा: ${w.windSpeed} किमी/तास.`
+        },
+
+        english: {
+          greeting: () => `🙏 Hello! I'm WeatherGPT.\n\n${w.city} is currently at ${w.temp}°C with ${w.condition} skies.\n\nAsk me about upcoming rain, tomorrow's forecast, 7-day outlook, or crop recommendations!`,
+          when_rain: () => rainyDay
+            ? `🌧️ Upcoming rain forecast for ${w.city}:\n\nRain is expected in the coming days (${rainyDay.date ? rainyDay.date.slice(5) : 'next 2-3 days'}) with a ${rainyDay.precipProb || 40}% chance (${rainyDay.condition}).\n\nThe rest of the week is expected to remain largely dry. ☂️`
+            : `☀️ Rain is unlikely in ${w.city} over the next 5 to 7 days.\n\nSkies will remain mostly clear and dry with no significant precipitation systems approaching. 👍`,
+          tomorrow: () => `📅 Tomorrow's forecast for ${w.city}:\n\n🌡️ High: ${tom.maxTemp || (w.temp + 1)}°C | Low: ${tom.minTemp || (w.temp - 6)}°C\n☁️ Conditions: ${tom.condition || w.condition}\n💧 Rain Probability: ${tom.precipProb || 15}%\n\n${(tom.precipProb || 0) > 40 ? 'Rain is expected tomorrow — carry an umbrella!' : 'Pleasant and stable outdoor conditions expected.'}`,
+          weekly: () => `📊 7-Day Weather Outlook for ${w.city}:\n\nTemperatures will range between ${Math.min(w.temp, tom.minTemp || 24)}°C and ${Math.max(w.temp + 2, tom.maxTemp || 35)}°C.\n${rainyDay ? `Expect light showers mid-week (${rainyDay.condition}).` : 'Mainly dry and clear weather expected throughout the week.'}\n\nTap "7-Day Forecast" below for day-by-day details.`,
+          rain_today: () => isRainy
+            ? `🌧️ Yes! Rain is very likely in ${w.city} today. Humidity is at ${w.humidity}% with overcast skies.\n\n☂️ Don't forget to carry an umbrella!`
+            : `☀️ No, rain is unlikely in ${w.city} today. Humidity is ${w.humidity}% and skies are ${w.condition}.\n\nYou're good to go without an umbrella! 👍`,
+          temperature: () => `🌡️ Current temperature in ${w.city} is ${w.temp}°C (feels like ${w.feelsLike}°C).\n\n${w.temp > 38 ? '🔥 Extreme heat! Stay indoors during peak hours (12-4 PM) and drink plenty of fluids.' : w.temp > 30 ? '☀️ Warm conditions — stay hydrated.' : w.temp < 15 ? '🧥 Chilly weather — wear warm layers.' : '😊 Very pleasant and comfortable weather!'}`,
+          irrigation: () => isRainy
+            ? `💧 Hold off on irrigation! Humidity is high (${w.humidity}%) and rainfall is likely. Ensure proper field drainage to prevent waterlogging. 🌾`
+            : `💧 Yes, suitable for crop irrigation today. Best time: early morning (6-9 AM) or evening (after 5 PM) to minimize evaporation. 🌾`,
+          fishing: () => isDangerousWind
+            ? `⛔ **DO NOT GO TO SEA!** Wind speed is ${w.windSpeed} km/h (${knots} knots). Hazardous rough sea conditions. Keep all boats moored. 🚫🌊`
+            : `🎣 Coastal conditions near ${w.city} are safe. Wind is ${w.windSpeed} km/h. Best fishing window is 5:30 AM to 9:30 AM. ⛵`,
+          wind: () => `💨 Surface wind in ${w.city} is ${w.windSpeed} km/h from the ${w.windDirection}.\n\n${isDangerousWind ? '⚠️ High wind hazard!' : w.windSpeed > 25 ? 'Moderately breezy.' : 'Gentle breeze, normal conditions.'} 🍃`,
+          outdoor: () => `${getWeatherEmoji(w.condition)} Weather in ${w.city} is ${w.condition} at ${w.temp}°C.\n\n${isRainy ? '🌧️ Rain expected — keep an umbrella handy.' : '👍 Great weather for outdoor activities and travel!'}`,
+          uv: () => `☀️ UV index in ${w.city} is ${w.uvIndex}.\n\n${w.uvIndex > 8 ? '⚠️ Very high UV! Apply SPF 30+ sunscreen and wear sunglasses/hat.' : 'UV levels are safe.'} 🧴`,
+          humidity: () => `💧 Relative humidity in ${w.city} is ${w.humidity}% with visibility of ${w.visibility} km.`,
+          general: () => `${getWeatherEmoji(w.condition)} ${w.city} Weather Summary:\n\n🌡️ Temperature: ${w.temp}°C (Feels: ${w.feelsLike}°C)\n💧 Humidity: ${w.humidity}%\n💨 Wind: ${w.windSpeed} km/h (${w.windDirection})\n☀️ UV Index: ${w.uvIndex}\n\n${isRainy ? '🌧️ Rain likely — carry an umbrella!' : '😊 Pleasant weather conditions!'}`
+        }
+      };
+
+      // Map persona-specific intents
+      let effectiveIntent = intent;
+      if (persona === 'farmer' && (intent === 'general' || intent === 'greeting')) effectiveIntent = 'irrigation';
+      if (persona === 'fisherman' && (intent === 'general' || intent === 'greeting')) effectiveIntent = 'fishing';
+
+      // Get the language response builder, fall back to english
+      const langBuilder = R[language] || R.english;
+      const intentFn = langBuilder[effectiveIntent] || langBuilder.general;
+      return intentFn();
+    }
+
+    /* ===== ROBUST 3-TIER GEOCODING ENGINE ===== */
+    async function geocodeAddress(cityName) {
+      if (!cityName || !cityName.trim()) return null;
+      const cleanName = cityName.trim();
+      const norm = cleanName.toLowerCase();
+
+      // Tier 1: Check built-in Indian cities database first
+      if (INDIAN_CITIES_DB[norm]) {
+        const item = INDIAN_CITIES_DB[norm];
+        return {
+          lat: item.lat,
+          lng: item.lng,
+          city: item.city,
+          formattedAddress: `${item.city}, India`
+        };
+      }
+
+      for (const [key, item] of Object.entries(INDIAN_CITIES_DB)) {
+        if (norm === key || (norm.length > 3 && key.includes(norm)) || (key.length > 3 && norm.includes(key))) {
+          return {
+            lat: item.lat,
+            lng: item.lng,
+            city: item.city,
+            formattedAddress: `${item.city}, India`
+          };
+        }
+      }
+
+      // Tier 2: Google Geocoding API
+      try {
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cleanName)}&key=${CONFIG.GOOGLE_API_KEY}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status === 'OK' && data.results && data.results.length > 0) {
+          const first = data.results[0];
+          const loc = first.geometry.location;
+          const locality = first.address_components?.find(c => c.types.includes('locality'))?.long_name;
+          const adminArea = first.address_components?.find(c => c.types.includes('administrative_area_level_1'))?.long_name;
+          return {
+            lat: loc.lat,
+            lng: loc.lng,
+            city: locality || cleanName,
+            formattedAddress: first.formatted_address || `${locality || cleanName}, ${adminArea || 'India'}`
+          };
+        }
+      } catch (err) {
+        console.warn('Google Geocode error, trying Open-Meteo geocode:', err);
+      }
+
+      // Tier 3: Open-Meteo Geocoding API
+      try {
+        const omUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanName)}&count=1&language=en&format=json`;
+        const omRes = await fetch(omUrl);
+        const omData = await omRes.json();
+        if (omData && omData.results && omData.results.length > 0) {
+          const r = omData.results[0];
+          return {
+            lat: r.latitude,
+            lng: r.longitude,
+            city: r.name,
+            formattedAddress: `${r.name}, ${r.admin1 || r.country || 'India'}`
+          };
+        }
+      } catch (omErr) {
+        console.warn('Open-Meteo geocoding error:', omErr);
+      }
+
+      return null;
+    }
+
+    // Reverse Geocoding
+    async function reverseGeocodeCoords(lat, lng) {
+      try {
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${CONFIG.GOOGLE_API_KEY}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status === 'OK' && data.results && data.results.length > 0) {
+          const first = data.results[0];
+          const locality = first.address_components?.find(c => c.types.includes('locality'))?.long_name;
+          return locality || first.formatted_address?.split(',')[0] || 'Your Location';
+        }
+      } catch (err) {
+        console.warn('Reverse geocode error:', err);
+      }
+      return 'Your Location';
+    }
+
+    // 2. Google Weather APIs
+    async function fetchGoogleCurrentWeather(lat, lng) {
+      const res = await fetch(`https://weather.googleapis.com/v1/currentConditions:lookup?key=${CONFIG.GOOGLE_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: { latitude: lat, longitude: lng } })
+      });
+      if (!res.ok) throw new Error(`Google Current Weather HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    async function fetchGoogleHourlyForecast(lat, lng) {
+      const res = await fetch(`https://weather.googleapis.com/v1/forecast/hours:lookup?key=${CONFIG.GOOGLE_API_KEY}&hours=24`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: { latitude: lat, longitude: lng } })
+      });
+      if (!res.ok) throw new Error(`Google Hourly Forecast HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    async function fetchGoogleDailyForecast(lat, lng) {
+      const res = await fetch(`https://weather.googleapis.com/v1/forecast/days:lookup?key=${CONFIG.GOOGLE_API_KEY}&days=7`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: { latitude: lat, longitude: lng } })
+      });
+      if (!res.ok) throw new Error(`Google Daily Forecast HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    async function fetchGoogleWeatherAlerts(lat, lng) {
+      try {
+        const res = await fetch(`https://weather.googleapis.com/v1/weatherAlerts:lookup?key=${CONFIG.GOOGLE_API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ location: { latitude: lat, longitude: lng } })
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.weatherAlerts || data.alerts || [];
+      } catch {
+        return [];
+      }
+    }
+
+    // 3. Open-Meteo Fallback
+    async function fetchOpenMeteoData(lat, lng) {
+      const params = new URLSearchParams({
+        latitude: lat,
+        longitude: lng,
+        current: 'temperature_2m,relative_humidity_2m,wind_speed_10m,weathercode,precipitation,apparent_temperature,uv_index,visibility,wind_direction_10m,is_day',
+        hourly: 'temperature_2m,precipitation_probability,wind_speed_10m,weathercode',
+        daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode,precipitation_probability_max,windspeed_10m_max,sunrise,sunset',
+        timezone: 'Asia/Kolkata',
+        forecast_days: '7'
+      });
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+      if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    // Parsers
+    function normalizeGoogleWeather(current, cityName, alerts) {
+      const cond = current.weatherCondition?.description || current.condition?.description || 'Clear';
+      return {
+        city: cityName,
+        temp: Math.round(current.temperature?.degrees ?? current.temperature ?? 28),
+        feelsLike: Math.round(current.feelsLikeTemperature?.degrees ?? current.feelsLikeTemperature ?? current.temperature?.degrees ?? 28),
+        humidity: current.relativeHumidity ?? current.humidity ?? 50,
+        windSpeed: Math.round(current.windSpeed?.value ?? current.wind?.speed?.value ?? 10),
+        windDirection: current.windDirection?.cardinal ?? current.wind?.direction?.cardinal ?? 'N/A',
+        condition: cond,
+        iconBaseUri: current.weatherCondition?.iconBaseUri || '',
+        uvIndex: current.uvIndex ?? 5,
+        visibility: Math.round((current.visibility?.value ?? current.visibility ?? 10000) / 1000),
+        isDaytime: current.isDaytime ?? true,
+        alerts: alerts || [],
+        source: 'google'
+      };
+    }
+
+    function normalizeGoogleHourly(hourlyData) {
+      const list = hourlyData.forecastHours || hourlyData.hours || [];
+      return list.slice(0, 24).map(h => ({
+        time: h.displayDateTime || h.forecastTime || h.time || new Date().toISOString(),
+        temp: Math.round(h.temperature?.degrees ?? h.temperature ?? 0),
+        condition: h.weatherCondition?.description || 'Clear',
+        precipProb: h.precipitation?.probability?.percentage ?? h.precipitationProbability ?? 0,
+        windSpeed: Math.round(h.windSpeed?.value ?? h.wind?.speed?.value ?? 0)
+      }));
+    }
+
+    function normalizeGoogleDaily(dailyData) {
+      const list = dailyData.forecastDays || dailyData.days || [];
+      return list.slice(0, 7).map((d, i) => ({
+        date: d.displayDate || d.forecastDate || d.date || new Date().toISOString(),
+        maxTemp: Math.round(d.maxTemperature?.degrees ?? d.daytimeForecast?.temperature?.degrees ?? d.temperature?.max ?? 32),
+        minTemp: Math.round(d.minTemperature?.degrees ?? d.overnightForecast?.temperature?.degrees ?? d.temperature?.min ?? 22),
+        condition: d.weatherCondition?.description ?? d.daytimeForecast?.weatherCondition?.description ?? 'Clear',
+        precipProb: d.precipitation?.probability?.percentage ?? d.daytimeForecast?.precipitation?.probability?.percentage ?? d.precipitationProbability ?? 0,
+        precipAmount: d.precipitation?.qpf?.millimeters ?? 0,
+        maxWindSpeed: Math.round(d.maxWindSpeed?.value ?? d.wind?.max?.speed?.value ?? 15),
+        sunriseTime: d.sunriseTime ?? d.sunrise ?? '',
+        sunsetTime: d.sunsetTime ?? d.sunset ?? '',
+        index: i
+      }));
+    }
+
+    function normalizeOpenMeteoWeather(data, cityName) {
+      const c = data.current;
+      const wmo = getWmoData(c.weathercode);
+      return {
+        city: cityName,
+        temp: Math.round(c.temperature_2m),
+        feelsLike: Math.round(c.apparent_temperature),
+        humidity: c.relative_humidity_2m,
+        windSpeed: Math.round(c.wind_speed_10m),
+        windDirection: degreesToCardinal(c.wind_direction_10m),
+        condition: wmo.desc,
+        iconBaseUri: '',
+        uvIndex: c.uv_index ?? 5,
+        visibility: Math.round((c.visibility ?? 10000) / 1000),
+        isDaytime: c.is_day === 1,
+        alerts: [],
+        source: 'open-meteo'
+      };
+    }
+
+    function normalizeOpenMeteoHourly(data) {
+      const h = data.hourly;
+      if (!h || !h.time) return [];
+      return h.time.slice(0, 24).map((t, i) => ({
+        time: t,
+        temp: Math.round(h.temperature_2m[i]),
+        condition: getWmoData(h.weathercode[i]).desc,
+        precipProb: h.precipitation_probability?.[i] ?? 0,
+        windSpeed: Math.round(h.wind_speed_10m[i])
+      }));
+    }
+
+    function normalizeOpenMeteoDaily(data) {
+      const d = data.daily;
+      if (!d || !d.time) return [];
+      return d.time.map((t, i) => ({
+        date: t,
+        maxTemp: Math.round(d.temperature_2m_max[i]),
+        minTemp: Math.round(d.temperature_2m_min[i]),
+        condition: getWmoData(d.weathercode[i]).desc,
+        precipProb: d.precipitation_probability_max?.[i] ?? 0,
+        precipAmount: d.precipitation_sum?.[i] ?? 0,
+        maxWindSpeed: Math.round(d.windspeed_10m_max?.[i] ?? 0),
+        sunriseTime: d.sunrise?.[i] ?? '',
+        sunsetTime: d.sunset?.[i] ?? '',
+        index: i
+      }));
+    }
+
+    // Unified Multi-LLM Provider API Engine (Claude / Gemini / OpenAI)
+    async function executeClaudeRequest(systemPrompt, conversationHistory) {
+      // 1. Try Anthropic Claude
+      if (CONFIG.CLAUDE_API_KEY) {
+        try {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': CONFIG.CLAUDE_API_KEY,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: 'claude-3-5-sonnet-20241022',
+              max_tokens: 800,
+              system: systemPrompt,
+              messages: conversationHistory.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
+            })
+          });
+          if (res.ok) {
+            const json = await res.json();
+            return json.content?.[0]?.text || '';
+          }
+        } catch (cErr) {
+          console.warn('Claude API call failed:', cErr);
+        }
+      }
+
+      // 2. Try Google Gemini API
+      if (CONFIG.GEMINI_API_KEY) {
+        try {
+          const geminiContents = [
+            { role: 'user', parts: [{ text: systemPrompt }] },
+            { role: 'model', parts: [{ text: 'Understood. I am WeatherGPT and will follow all instructions.' }] },
+            ...conversationHistory.map(m => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content }]
+            }))
+          ];
+
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: geminiContents })
+          });
+          if (res.ok) {
+            const json = await res.json();
+            return json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          }
+        } catch (gErr) {
+          console.warn('Gemini API call failed:', gErr);
+        }
+      }
+
+      // 3. Try OpenAI API
+      if (CONFIG.OPENAI_API_KEY) {
+        try {
+          const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                ...conversationHistory.map(m => ({ role: m.role, content: m.content }))
+              ]
+            })
+          });
+          if (res.ok) {
+            const json = await res.json();
+            return json.choices?.[0]?.message?.content || '';
+          }
+        } catch (oErr) {
+          console.warn('OpenAI API call failed:', oErr);
+        }
+      }
+
+      throw new Error('No active LLM API Key configured. Using smart localized engine.');
+    }
+
+    /* ===== ALERT EVALUATOR ===== */
+    function evaluateAlertStatus(weather, googleAlerts, forecast, lang) {
+      const isHi = lang === 'hindi';
+      const isBn = lang === 'bengali';
+      const isTa = lang === 'tamil';
+      const isTe = lang === 'telugu';
+      const isMr = lang === 'marathi';
+
+      if (googleAlerts && googleAlerts.length > 0) {
+        const top = googleAlerts[0];
+        const s = (top.severity || '').toLowerCase();
+        if (s.includes('extreme') || s.includes('severe')) {
+          return { level: 'red', text: `🚨 EMERGENCY ALERT: ${top.headline || top.description}` };
+        }
+        if (s.includes('moderate')) {
+          return { level: 'orange', text: `🔶 Weather Warning: ${top.headline || top.description}` };
+        }
+        return { level: 'yellow', text: `⚠️ Weather Watch: ${top.headline || top.description}` };
+      }
+
+      if (!weather) return null;
+
+      const cond = (weather.condition || '').toLowerCase();
+      const maxPrecip = forecast?.daily?.[0]?.precipProb ?? 0;
+
+      if (cond.includes('storm') || cond.includes('cyclone') || cond.includes('thunder')) {
+        let alertMsg = `🚨 EMERGENCY ALERT: ${weather.condition} in ${weather.city}. Take shelter.`;
+        if (isHi) alertMsg = `🚨 आपातकालीन चेतावनी: ${weather.city} में ${weather.condition} का प्रभाव। सुरक्षित स्थान पर रहें।`;
+        if (isBn) alertMsg = `🚨 জরুরি সতর্কতা: ${weather.city}-এ ${weather.condition}। নিরাপদ আশ্রয়ে থাকুন।`;
+        if (isTa) alertMsg = `🚨 அவசர எச்சரிக்கை: ${weather.city} பகுதியில் ${weather.condition} நிலவுகிறது. பாதுகாப்பாக இருக்கவும்.`;
+        if (isTe) alertMsg = `🚨 అత్యవసర హెచ్చరిక: ${weather.city} లో ${weather.condition} ప్రభావం. సురక్షిత ప్రదేశంలో ఉండండి.`;
+        if (isMr) alertMsg = `🚨 आणीबाणी इशारा: ${weather.city} मध्ये ${weather.condition} ची शक्यता. सुरक्षित राहा.`;
+        return { level: 'red', text: alertMsg };
+      }
+      if (weather.temp >= 42) {
+        let alertMsg = `🚨 HEATWAVE ALERT: Temperature is ${weather.temp}°C in ${weather.city}. Avoid outdoor exposure.`;
+        if (isHi) alertMsg = `🚨 भीषण लू (हीटवेव) चेतावनी: ${weather.city} में तापमान ${weather.temp}°C है। धूप से बचें।`;
+        if (isBn) alertMsg = `🚨 তীব্র তাপপ্রবাহ সতর্কতা: ${weather.city}-এ তাপমাত্রা ${weather.temp}°C। রোদ এড়িয়ে চলুন।`;
+        if (isTa) alertMsg = `🚨 கடுமையான வெப்ப அலை எச்சரிக்கை: ${weather.city} வெப்ப நிலை ${weather.temp}°C. வெயிலில் செல்ல வேண்டாம்.`;
+        if (isTe) alertMsg = `🚨 తీవ్ర వడగాల్పుల హెచ్చరిక: ${weather.city} లో ఉష్ణోగ్రత ${weather.temp}°C. ఎండలో తిరగవద్దు.`;
+        if (isMr) alertMsg = `🚨 तीव्र उष्णतेची लाट इशारा: ${weather.city} मध्ये तापमान ${weather.temp}°C आहे. उन्हात जाणे टाळा.`;
+        return { level: 'red', text: alertMsg };
+      }
+      if (weather.temp <= 5) {
+        let alertMsg = `❄️ COLD WAVE WARNING: Temperature is ${weather.temp}°C in ${weather.city}. Stay warm.`;
+        if (isHi) alertMsg = `❄️ शीत लहर चेतावनी: ${weather.city} में तापमान गिरकर ${weather.temp}°C हो गया है। गर्म कपड़े पहनें।`;
+        if (isBn) alertMsg = `❄️ শৈত্যপ্রবাহের সতর্কতা: ${weather.city}-এ তাপমাত্রা কমে ${weather.temp}°C। গরম পোশাক পরুন।`;
+        if (isTa) alertMsg = `❄️ குளிர் அலை எச்சரிக்கை: ${weather.city} பகுதியில் வெப்பநிலை ${weather.temp}°C ஆக குறைந்துள்ளது.`;
+        if (isTe) alertMsg = `❄️ చలి గాలుల హెచ్చరిక: ${weather.city} లో ఉష్ణోగ్రత ${weather.temp}°C కి పడిపోయింది.`;
+        if (isMr) alertMsg = `❄️ थंडीची लाट इशारा: ${weather.city} मध्ये तापमान ${weather.temp}°C पर्यंत खाली आले आहे.`;
+        return { level: 'blue', text: alertMsg };
+      }
+      if (weather.windSpeed > 40) {
+        let alertMsg = `🔶 Weather Warning: High surface winds at ${weather.windSpeed} km/h in ${weather.city}.`;
+        if (isHi) alertMsg = `🔶 मौसम चेतावनी: ${weather.city} में ${weather.windSpeed} किमी/घंटा की गति से तेज हवाएं चल रही हैं।`;
+        if (isBn) alertMsg = `🔶 আবহাওয়া সতর্কতা: ${weather.city}-এ ${weather.windSpeed} কিমি/ঘণ্টা বেগে ঝোড়ো বাতাস বইছে।`;
+        if (isTa) alertMsg = `🔶 வானிலை எச்சரிக்கை: ${weather.city} பகுதியில் மணிக்கு ${weather.windSpeed} கி.மீ வேகத்தில் பலத்த காற்று வீசுகிறது.`;
+        if (isTe) alertMsg = `🔶 వాతావరణ హెచ్చరిక: ${weather.city} లో గంటకు ${weather.windSpeed} కి.మీ వేగంతో బలమైన ఈదురు గాలులు.`;
+        if (isMr) alertMsg = `🔶 हवामान इशारा: ${weather.city} मध्ये ताशी ${weather.windSpeed} किमी वेगाने जोरदार वारे वाहत आहेत.`;
+        return { level: 'orange', text: alertMsg };
+      }
+      if (maxPrecip > 80 || weather.humidity > 85) {
+        let alertMsg = `⚠️ Weather Watch: Heavy rain likely (${maxPrecip}% probability) in ${weather.city}.`;
+        if (isHi) alertMsg = `⚠️ मौसम निगरानी: ${weather.city} में भारी बारिश की संभावना (${maxPrecip}%) है।`;
+        if (isBn) alertMsg = `⚠️ আবহাওয়া নজরদারি: ${weather.city}-এ ভারী বৃষ্টির সম্ভাবনা (${maxPrecip}%) রয়েছে।`;
+        if (isTa) alertMsg = `⚠️ வானிலை கண்காணிப்பு: ${weather.city} பகுதியில் கனமழை பெய்ய அதிக வாய்ப்பு (${maxPrecip}%) உள்ளது.`;
+        if (isTe) alertMsg = `⚠️ వాతావరణ పరిశీలన: ${weather.city} లో భారీ వర్షం కురిసే అవకాశం (${maxPrecip}%) ఉంది.`;
+        if (isMr) alertMsg = `⚠️ हवामान सतर्कता: ${weather.city} मध्ये मुसळधार पावसाची शक्यता (${maxPrecip}%) आहे.`;
+        return { level: 'yellow', text: alertMsg };
+      }
+
+      let clearMsg = `✅ Weather is clear in ${weather.city}`;
+      if (isHi) clearMsg = `✅ ${weather.city} में मौसम सामान्य एवं साफ है`;
+      if (isBn) clearMsg = `✅ ${weather.city}-এ আবহাওয়া পরিষ্কার ও স্বাভাবিক রয়েছে`;
+      if (isTa) clearMsg = `✅ ${weather.city} பகுதியில் வானிலை இயல்பாக உள்ளது`;
+      if (isTe) clearMsg = `✅ ${weather.city} లో వాతావరణం ప్రశాంతంగా ఉంది`;
+      if (isMr) clearMsg = `✅ ${weather.city} मध्ये हवामान सामान्य व स्वच्छ आहे`;
+      return { level: 'green', text: clearMsg };
+    }
+
+    /* ===== SPEECH SYNTHESIS HELPER ===== */
+    function triggerTtsSpeech(text, language) {
+      if (!('speechSynthesis' in window)) return null;
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = LANG_CODES[language] || 'en-IN';
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+      return utterance;
+    }
+
+    /* =========================================================================
+       MAIN REACT APPLICATION COMPONENT
+       ========================================================================= */
+    function WeatherGptApp() {
+      // Location & Search State
+      const [currentLoc, setCurrentLoc] = useState({ city: 'New Delhi', lat: 28.6139, lng: 77.2090 });
+      const [searchInput, setSearchInput] = useState('');
+      const [searchHistory, setSearchHistory] = useState(['New Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru']);
+      const [isDetectingLoc, setIsDetectingLoc] = useState(false);
+
+      // Personas & Language
+      const [selectedPersona, setSelectedPersona] = useState('citizen');
+      const [selectedLanguage, setSelectedLanguage] = useState('hindi');
+
+      // Localized Strings based on selectedLanguage
+      const i18n = useMemo(() => UI_I18N[selectedLanguage] || UI_I18N.english, [selectedLanguage]);
+
+      // Weather Data State
+      const [weather, setWeather] = useState(null);
+      const [forecast, setForecast] = useState({ hourly: [], daily: [] });
+      const [weatherAlerts, setWeatherAlerts] = useState([]);
+      const [isFallbackMode, setIsFallbackMode] = useState(false);
+      const [isLoadingWeather, setIsLoadingWeather] = useState(true);
+      const [lastUpdatedTime, setLastUpdatedTime] = useState(null);
+      const [refreshCountdown, setRefreshCountdown] = useState(600); // 10 minutes
+
+      // Chat Messages State
+      const [messages, setMessages] = useState([]);
+      const [textInput, setTextInput] = useState('');
+      const [isTyping, setIsTyping] = useState(false);
+      const [isSending, setIsSending] = useState(false);
+
+      // Voice & Audio States
+      const [micStatus, setMicStatus] = useState('default'); // default | recording | processing
+      const [activeSpeakingId, setActiveSpeakingId] = useState(null);
+      const [translatedMap, setTranslatedMap] = useState({});
+
+      // Panels, Modals & Banner
+      const [showSevenDay, setShowSevenDay] = useState(false);
+      const [showTwentyFourHr, setShowTwentyFourHr] = useState(false);
+      const [alertBannerDismissed, setAlertBannerDismissed] = useState(false);
+      const [isCompareOpen, setIsCompareOpen] = useState(false);
+      const [compareCityQuery, setCompareCityQuery] = useState('');
+      const [compareWeatherData, setCompareWeatherData] = useState(null);
+      const [isCompareLoading, setIsCompareLoading] = useState(false);
+      const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+      const [claudeKeyInput, setClaudeKeyInput] = useState(CONFIG.CLAUDE_API_KEY);
+      const [geminiKeyInput, setGeminiKeyInput] = useState(CONFIG.GEMINI_API_KEY);
+      const [openaiKeyInput, setOpenaiKeyInput] = useState(CONFIG.OPENAI_API_KEY);
+      const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+      const [toastMsg, setToastMsg] = useState(null);
+
+      // Refs
+      const chatBottomRef = useRef(null);
+      const inputAreaRef = useRef(null);
+      const speechRecognizerRef = useRef(null);
+      const speechDebounceRef = useRef(null);
+
+      // Active Alert Info
+      const activeAlert = useMemo(() => evaluateAlertStatus(weather, weatherAlerts, forecast, selectedLanguage), [weather, weatherAlerts, forecast, selectedLanguage]);
+
+      // Show temporary toast notification
+      const showToast = useCallback((msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(null), 3000);
+      }, []);
+
+      // --- Fetch Weather Master Function ---
+      const fetchWeatherData = useCallback(async (lat, lng, cityName) => {
+        setIsLoadingWeather(true);
+        setIsFallbackMode(false);
+
+        let curWeather = null;
+        let hourlyList = [];
+        let dailyList = [];
+        let alertsList = [];
+
+        // 1. Try Google Weather API
+        try {
+          const [curRes, hourlyRes, dailyRes, alertsRes] = await Promise.all([
+            fetchGoogleCurrentWeather(lat, lng),
+            fetchGoogleHourlyForecast(lat, lng),
+            fetchGoogleDailyForecast(lat, lng),
+            fetchGoogleWeatherAlerts(lat, lng)
+          ]);
+
+          curWeather = normalizeGoogleWeather(curRes, cityName, alertsRes);
+          hourlyList = normalizeGoogleHourly(hourlyRes);
+          dailyList = normalizeGoogleDaily(dailyRes);
+          alertsList = alertsRes;
+        } catch (googleErr) {
+          console.warn('Google Weather API request encountered an issue; seamlessly activating Open-Meteo fallback:', googleErr);
+          try {
+            const meteoData = await fetchOpenMeteoData(lat, lng);
+            curWeather = normalizeOpenMeteoWeather(meteoData, cityName);
+            hourlyList = normalizeOpenMeteoHourly(meteoData);
+            dailyList = normalizeOpenMeteoDaily(meteoData);
+            setIsFallbackMode(true);
+          } catch (meteoErr) {
+            console.error('All weather providers failed:', meteoErr);
+            showToast('⚠️ Unable to connect to weather satellites. Using cached view.');
+            setIsLoadingWeather(false);
+            return;
+          }
+        }
+
+        if (curWeather) {
+          curWeather.alerts = alertsList;
+          setWeather(curWeather);
+          setForecast({ hourly: hourlyList, daily: dailyList });
+          setWeatherAlerts(alertsList);
+          setLastUpdatedTime(new Date());
+          setAlertBannerDismissed(false);
+          setRefreshCountdown(600);
+        }
+        setIsLoadingWeather(false);
+      }, [showToast]);
+
+      // Initial Mount
+      useEffect(() => {
+        fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+      }, []);
+
+      // Auto-populate default compare city on first compare open if empty
+      useEffect(() => {
+        if (isCompareOpen && !compareWeatherData && !compareCityQuery) {
+          const defaultCompare = currentLoc.city.toLowerCase().includes('mumbai') ? 'New Delhi' : 'Mumbai';
+          setCompareCityQuery(defaultCompare);
+          handleFetchCompareCity(defaultCompare);
+        }
+      }, [isCompareOpen]);
+
+      // 10-Minute Auto-Refresh Countdown
+      useEffect(() => {
+        const timer = setInterval(() => {
+          setRefreshCountdown(prev => {
+            if (prev <= 1) {
+              fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+              return 600;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(timer);
+      }, [currentLoc, fetchWeatherData]);
+
+      // Chat Auto-Scroll
+      useEffect(() => {
+        chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [messages, isTyping]);
+
+      // Global Keyboard Shortcuts
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (e.ctrlKey && (e.key === 'm' || e.key === 'M')) {
+            e.preventDefault();
+            handleToggleMicrophone();
+          }
+          if (e.key === 'Escape') {
+            if (isCompareOpen) setIsCompareOpen(false);
+            else if (isSettingsOpen) setIsSettingsOpen(false);
+            else {
+              setTextInput('');
+              inputAreaRef.current?.focus();
+            }
+          }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [isCompareOpen, isSettingsOpen, micStatus]);
+
+      // Location Search
+      const handleExecuteSearch = async (targetCity) => {
+        if (!targetCity || !targetCity.trim()) return;
+        const clean = targetCity.trim();
+        const geo = await geocodeAddress(clean);
+
+        if (geo) {
+          setCurrentLoc({ city: geo.city, lat: geo.lat, lng: geo.lng });
+          setSearchInput('');
+          setSearchHistory(prev => {
+            const filtered = prev.filter(c => c.toLowerCase() !== geo.city.toLowerCase());
+            return [geo.city, ...filtered].slice(0, 5);
+          });
+          fetchWeatherData(geo.lat, geo.lng, geo.city);
+          setMobileSidebarOpen(false);
+        } else {
+          showToast(`❌ Could not locate "${clean}". Please verify spelling.`);
+        }
+      };
+
+      // Detect Browser Location
+      const handleDetectLocation = () => {
+        if (!navigator.geolocation) {
+          showToast('Geolocation is not supported by your browser.');
+          return;
+        }
+
+        setIsDetectingLoc(true);
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            const cityName = await reverseGeocodeCoords(latitude, longitude);
+            setCurrentLoc({ city: cityName, lat: latitude, lng: longitude });
+            fetchWeatherData(latitude, longitude, cityName);
+            setIsDetectingLoc(false);
+            setMobileSidebarOpen(false);
+            showToast(`📍 Detected: ${cityName}`);
+          },
+          (err) => {
+            console.warn('Geolocation denied/error:', err);
+            showToast('⚠️ Location access denied. Please enter city manually.');
+            setIsDetectingLoc(false);
+          },
+          { timeout: 10000, maximumAge: 300000 }
+        );
+      };
+
+      // --- Chat Messaging Engine ---
+      const handleSendMessage = async (textToSend) => {
+        const query = (textToSend || textInput).trim();
+        if (!query || isSending) return;
+
+        const userMsg = {
+          role: 'user',
+          content: query,
+          time: getCurrentTimestamp(),
+          id: Date.now() + Math.random()
+        };
+
+        setMessages(prev => [...prev, userMsg]);
+        setTextInput('');
+        if (inputAreaRef.current) inputAreaRef.current.style.height = 'auto';
+
+        setIsSending(true);
+        setIsTyping(true);
+
+        // Small realistic typing delay
+        await new Promise(r => setTimeout(r, 250));
+
+        let generatedAnswer = '';
+        const weatherSummary = weather ? formatWeatherForPrompt(weather, forecast) : 'Weather conditions unavailable.';
+        const systemPrompt = buildSystemPrompt(selectedPersona, selectedLanguage, weatherSummary);
+        const historyForClaude = [...messages.slice(-8), userMsg].map(m => ({ role: m.role, content: m.content }));
+
+        try {
+          if (CONFIG.CLAUDE_API_KEY) {
+            generatedAnswer = await executeClaudeRequest(systemPrompt, historyForClaude);
+          } else {
+            throw new Error('Claude API key not provided in CONFIG');
+          }
+        } catch (apiErr) {
+          console.info('Using high-fidelity local persona engine:', apiErr.message);
+          generatedAnswer = generateSmartLocalResponse(selectedPersona, selectedLanguage, weather, query, forecast);
+        }
+
+        const aiMsg = {
+          role: 'assistant',
+          content: generatedAnswer,
+          query: query,
+          time: getCurrentTimestamp(),
+          id: Date.now() + Math.random(),
+          source: isFallbackMode ? 'open-meteo' : 'google'
+        };
+
+        setMessages(prev => [...prev, aiMsg]);
+        setIsTyping(false);
+        setIsSending(false);
+      };
+
+      // Voice STT Controller
+      const handleToggleMicrophone = () => {
+        if (micStatus === 'recording') {
+          speechRecognizerRef.current?.stop();
+          setMicStatus('default');
+          return;
+        }
+
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) {
+          showToast('🎤 Web Speech API not supported in this browser. Try Chrome/Edge.');
+          return;
+        }
+
+        const recognition = new SpeechRec();
+        recognition.lang = LANG_CODES[selectedLanguage] || 'hi-IN';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        speechRecognizerRef.current = recognition;
+
+        recognition.onstart = () => {
+          setMicStatus('recording');
+        };
+
+        recognition.onresult = (e) => {
+          let liveTranscript = '';
+          for (let i = 0; i < e.results.length; i++) {
+            liveTranscript += e.results[i][0].transcript;
+          }
+          setTextInput(liveTranscript);
+
+          const isFinal = e.results[e.results.length - 1].isFinal;
+          if (isFinal) {
+            setMicStatus('processing');
+            clearTimeout(speechDebounceRef.current);
+            speechDebounceRef.current = setTimeout(() => {
+              handleSendMessage(liveTranscript);
+              setMicStatus('default');
+            }, 1500);
+          }
+        };
+
+        recognition.onerror = (e) => {
+          console.warn('Speech recognition error:', e.error);
+          setMicStatus('default');
+        };
+
+        recognition.onend = () => {
+          if (micStatus === 'recording') setMicStatus('default');
+        };
+
+        recognition.start();
+      };
+
+      // TTS Audio Controller
+      const handleToggleListen = (msg) => {
+        if (activeSpeakingId === msg.id) {
+          window.speechSynthesis.cancel();
+          setActiveSpeakingId(null);
+          return;
+        }
+
+        const utterance = triggerTtsSpeech(msg.content, selectedLanguage);
+        if (utterance) {
+          setActiveSpeakingId(msg.id);
+          utterance.onend = () => setActiveSpeakingId(null);
+          utterance.onerror = () => setActiveSpeakingId(null);
+        }
+      };
+
+      // Copy to Clipboard
+      const handleCopyText = (msg) => {
+        navigator.clipboard.writeText(msg.content)
+          .then(() => showToast('📋 Copied to clipboard!'))
+          .catch(() => showToast('Failed to copy.'));
+      };
+
+      // Share Weather Report
+      const handleShareWeather = (msg) => {
+        const sharePayload = `WeatherGPT (${currentLoc.city}):\n${msg.content}\n\n[Powered by WeatherGPT • Smart India Hackathon 2026]`;
+        navigator.clipboard.writeText(sharePayload)
+          .then(() => showToast('📤 Weather report copied for sharing!'))
+          .catch(() => showToast('Failed to copy share text.'));
+      };
+
+      // Instant Message Translation to English
+      const handleToggleTranslate = async (msg) => {
+        if (!msg || !msg.id) return;
+
+        if (translatedMap[msg.id]) {
+          setTranslatedMap(prev => {
+            const next = { ...prev };
+            delete next[msg.id];
+            return next;
+          });
+          return;
+        }
+
+        if (CONFIG.CLAUDE_API_KEY) {
+          try {
+            const trans = await executeClaudeRequest(
+              'Translate the following Indian regional weather message to clear English. Output only the translation, no extra commentary.',
+              [{ role: 'user', content: msg.content }]
+            );
+            if (trans && trans.trim()) {
+              setTranslatedMap(prev => ({ ...prev, [msg.id]: trans.trim() }));
+              return;
+            }
+          } catch (err) {
+            console.info('Claude translation not available, using local engine:', err.message);
+          }
+        }
+
+        // Smart local English translation fallback using our localized persona engine
+        try {
+          const userQuery = msg.query || '';
+          const engText = generateSmartLocalResponse(selectedPersona, 'english', weather, userQuery || msg.content, forecast);
+          setTranslatedMap(prev => ({ ...prev, [msg.id]: engText }));
+        } catch (e) {
+          console.warn('Translation engine error:', e);
+          const w = weather || {};
+          const isRainy = (w.condition || '').toLowerCase().includes('rain') || (w.humidity || 0) > 75;
+          let basicSummary = `Weather for ${w.city || 'your area'}: ${w.temp || 28}°C, ${w.condition || 'Clear'}.\n` +
+            `Humidity: ${w.humidity || 55}% | Wind: ${w.windSpeed || 12} km/h | UV: ${w.uvIndex || 5}\n\n` +
+            (isRainy ? '🌧️ Rain is expected — carry an umbrella!' : '😊 Pleasant weather conditions for outdoor activities.');
+          setTranslatedMap(prev => ({ ...prev, [msg.id]: basicSummary }));
+        }
+      };
+
+      // Compare Mode Search with full fallbacks
+      const handleFetchCompareCity = async (targetCity) => {
+        const query = (targetCity !== undefined ? targetCity : compareCityQuery).trim();
+        if (!query) {
+          showToast('Please enter a city name to compare.');
+          return;
+        }
+
+        setIsCompareLoading(true);
+        const geo = await geocodeAddress(query);
+
+        if (geo) {
+          let compW = null;
+          try {
+            const curRes = await fetchGoogleCurrentWeather(geo.lat, geo.lng);
+            compW = normalizeGoogleWeather(curRes, geo.city, []);
+          } catch (gErr) {
+            console.warn('Google Weather compare request failed, using Open-Meteo:', gErr);
+            try {
+              const meteo = await fetchOpenMeteoData(geo.lat, geo.lng);
+              compW = normalizeOpenMeteoWeather(meteo, geo.city);
+            } catch (mErr) {
+              console.error('All compare weather providers failed:', mErr);
+            }
+          }
+
+          if (compW) {
+            setCompareWeatherData(compW);
+            showToast(`✅ Comparison loaded for ${compW.city}`);
+          } else {
+            setCompareWeatherData(null);
+            showToast(`Failed to fetch weather for "${geo.city}".`);
+          }
+        } else {
+          showToast(`Could not find "${query}". Try cities like Mumbai, Chennai, Kolkata.`);
+        }
+        setIsCompareLoading(false);
+      };
+
+      // Clear Conversation
+      const handleClearConversation = () => {
+        setMessages([]);
+        setTranslatedMap({});
+        window.speechSynthesis.cancel();
+        setActiveSpeakingId(null);
+        showToast('🗑️ Conversation history cleared.');
+      };
+
+      // Auto-height textarea handler
+      const handleTextareaInput = (e) => {
+        const val = e.target.value;
+        if (val.length <= 200) {
+          setTextInput(val);
+          e.target.style.height = 'auto';
+          e.target.style.height = `${Math.min(e.target.scrollHeight, 110)}px`;
+        }
+      };
+
+      const handleInputKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSendMessage(textInput);
+        }
+      };
+
+      // Formatted Refresh Countdown
+      const countdownMinutes = Math.floor(refreshCountdown / 60);
+      const countdownSeconds = String(refreshCountdown % 60).padStart(2, '0');
+      const backgroundTint = weather ? getBackgroundTintClass(weather.condition, weather.isDaytime) : 'clear';
+
+      /* ===== RENDER UI ===== */
+      return html`
+        <div class="app-wrapper">
+          <!-- Mobile Hamburger Toggle -->
+          <button
+            class="mobile-nav-toggle"
+            id="mobile-nav-toggle"
+            onClick=${() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            title="Toggle Menu"
+          >
+            ${mobileSidebarOpen ? '✕' : '☰'}
+          </button>
+
+          <!-- Mobile Backdrop Overlay -->
+          <div
+            class="mobile-backdrop-overlay ${mobileSidebarOpen ? 'active' : ''}"
+            onClick=${() => setMobileSidebarOpen(false)}
+          />
+
+          <!-- LEFT SIDEBAR -->
+          <aside class="sidebar ${mobileSidebarOpen ? 'open' : ''}" id="app-sidebar">
+            <!-- Brand -->
+            <div class="sidebar-brand">
+              <div class="brand-logo-row">
+                <span class="brand-icon">⛈️</span>
+                <span class="brand-title">WeatherGPT</span>
+              </div>
+              <div class="brand-tagline">${i18n.tagline}</div>
+            </div>
+
+            <!-- Location Section -->
+            <div class="sidebar-section">
+              <div class="section-heading">${i18n.location}</div>
+              <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input
+                  id="city-search-input"
+                  class="location-input"
+                  type="text"
+                  placeholder=${i18n.searchPlaceholder}
+                  value=${searchInput}
+                  onInput=${e => setSearchInput(e.target.value)}
+                  onKeyDown=${e => e.key === 'Enter' && handleExecuteSearch(searchInput)}
+                />
+              </div>
+              <button
+                id="detect-location-btn"
+                class="detect-loc-btn"
+                onClick=${handleDetectLocation}
+                disabled=${isDetectingLoc}
+              >
+                ${isDetectingLoc ? i18n.detecting : i18n.detectLoc}
+              </button>
+              <div class="current-location-tag">
+                <span class="pulse-dot"></span>
+                <span>${currentLoc.city}</span>
+              </div>
+              ${searchHistory.length > 0 && html`
+                <div class="search-history-chips">
+                  ${searchHistory.map(city => html`
+                    <span
+                      key=${city}
+                      class="history-chip"
+                      onClick=${() => handleExecuteSearch(city)}
+                      title="Switch to ${city}"
+                    >
+                      ${city}
+                    </span>
+                  `)}
+                </div>
+              `}
+            </div>
+
+            <!-- Persona Section -->
+            <div class="sidebar-section">
+              <div class="section-heading">${i18n.iAmA}</div>
+              <div class="persona-grid">
+                ${Object.entries(PERSONA_CONFIG).map(([key, config]) => html`
+                  <button
+                    key=${key}
+                    id="persona-${key}"
+                    class="persona-card ${selectedPersona === key ? 'active' : ''}"
+                    onClick=${() => setSelectedPersona(key)}
+                  >
+                    <span class="persona-card-emoji">${config.emoji}</span>
+                    <span>${i18n.personas[key]}</span>
+                  </button>
+                `)}
+              </div>
+            </div>
+
+            <!-- Language Section -->
+            <div class="sidebar-section">
+              <div class="section-heading">${i18n.language}</div>
+              <select
+                id="language-select"
+                class="language-dropdown"
+                value=${selectedLanguage}
+                onChange=${e => setSelectedLanguage(e.target.value)}
+              >
+                ${Object.entries(LANG_OPTIONS).map(([key, label]) => html`
+                  <option key=${key} value=${key}>${label}</option>
+                `)}
+              </select>
+            </div>
+
+            <!-- Sidebar Weather Widget -->
+            <div class="sidebar-weather-widget" id="sidebar-weather-widget">
+              ${isLoadingWeather ? html`
+                <div>
+                  <div class="skeleton-block skel-temp"></div>
+                  <div class="skeleton-block skel-cond"></div>
+                  <div class="skeleton-block skel-stats"></div>
+                  <div class="skeleton-block skel-sun"></div>
+                </div>
+              ` : weather ? html`
+                <div class="widget-temp-row">
+                  <div class="widget-temp-large">${weather.temp}°</div>
+                  <div class="widget-temp-feels">${i18n.feelsLike} ${weather.feelsLike}°</div>
+                </div>
+                <div class="widget-condition-text">
+                  <span>${getWeatherEmoji(weather.condition)}</span>
+                  <span>${weather.condition}</span>
+                </div>
+                <div class="widget-stats-grid">
+                  <div class="widget-stat-box">
+                    <div class="stat-val">💧 ${weather.humidity}%</div>
+                    <div class="stat-lbl">${i18n.humidity}</div>
+                  </div>
+                  <div class="widget-stat-box">
+                    <div class="stat-val">💨 ${weather.windSpeed}</div>
+                    <div class="stat-lbl">${i18n.wind}</div>
+                  </div>
+                  <div class="widget-stat-box">
+                    <div class="stat-val">☀️ ${weather.uvIndex}</div>
+                    <div class="stat-lbl">${i18n.uv}</div>
+                  </div>
+                </div>
+                ${forecast.daily?.length > 0 && html`
+                  <div class="widget-sun-row">
+                    <span>🌅 ${formatClockTime(forecast.daily[0]?.sunriseTime)} (${i18n.sunrise})</span>
+                    <span>🌇 ${formatClockTime(forecast.daily[0]?.sunsetTime)} (${i18n.sunset})</span>
+                  </div>
+                `}
+                <div class="widget-footer-row">
+                  <span>${lastUpdatedTime ? getElapsedTimeLabel(lastUpdatedTime, selectedLanguage) : i18n.updated}</span>
+                  <button
+                    id="refresh-weather-btn"
+                    class="widget-refresh-btn ${isLoadingWeather ? 'spinning' : ''}"
+                    onClick=${() => fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city)}
+                    title="Refresh Live Weather"
+                  >
+                    <span class="spin-icon">🔄</span> ${i18n.refresh}
+                  </button>
+                </div>
+                <div class="auto-refresh-countdown">
+                  ${i18n.autoRefreshPrefix}${countdownMinutes}:${countdownSeconds}
+                </div>
+              ` : html`
+                <div class="weather-unavailable-msg">
+                  Weather data unavailable
+                </div>
+              `}
+            </div>
+          </aside>
+
+          <!-- MAIN VIEWPORT -->
+          <main class="main-viewport" id="main-viewport">
+            <!-- Top Alert Banner -->
+            ${activeAlert && !alertBannerDismissed && html`
+              <div class="alert-banner ${activeAlert.level}" id="alert-banner">
+                <div class="alert-text-group">
+                  <span>${activeAlert.text}</span>
+                </div>
+                <button
+                  class="alert-close-btn"
+                  onClick=${() => setAlertBannerDismissed(true)}
+                  title="Dismiss alert"
+                >✕</button>
+              </div>
+            `}
+
+            <!-- Main Header Bar -->
+            <header class="main-header">
+              <div class="header-left-info">
+                <h1 class="header-city-title">
+                  <span>${weather ? getWeatherEmoji(weather.condition) : '📍'}</span>
+                  <span>${currentLoc.city}</span>
+                  ${weather && html`<span class="header-condition-pill">· ${weather.condition}</span>`}
+                </h1>
+              </div>
+              <div class="header-actions-group">
+                <button
+                  id="compare-mode-btn"
+                  class="header-btn ${isCompareOpen ? 'active' : ''}"
+                  onClick=${() => setIsCompareOpen(true)}
+                  title="Compare two Indian cities"
+                >
+                  ${i18n.compare}
+                </button>
+                <button
+                  id="clear-chat-btn"
+                  class="header-btn"
+                  onClick=${handleClearConversation}
+                  title="Clear Chat History"
+                >
+                  ${i18n.clear}
+                </button>
+              </div>
+            </header>
+
+            <!-- Chat Messages Scroll Area -->
+            <div class="chat-scroll-area ${backgroundTint}" id="chat-scroll-area">
+              ${messages.length === 0 ? html`
+                <!-- Welcome State -->
+                <div class="welcome-container">
+                  <div class="welcome-badge">${i18n.welcomeBadge}</div>
+                  <h2 class="welcome-title">${i18n.welcomeTitle}</h2>
+                  <p class="welcome-subtitle">
+                    <strong>${currentLoc.city}</strong> ${i18n.welcomeSubtitle}
+                  </p>
+                  <div class="welcome-cards-grid">
+                    ${i18n.starters.map((card, idx) => html`
+                      <div
+                        key=${idx}
+                        id="welcome-card-${idx}"
+                        class="welcome-example-card"
+                        onClick=${() => {
+                          setSelectedPersona(card.personaKey);
+                          handleSendMessage(card.q);
+                        }}
+                      >
+                        <div class="welcome-card-top">
+                          <span class="welcome-card-icon">${card.emoji}</span>
+                          <span class="welcome-persona-tag">${card.title}</span>
+                        </div>
+                        <div class="welcome-q-text">"${card.q}"</div>
+                        <div class="welcome-a-text">${card.a}</div>
+                      </div>
+                    `)}
+                  </div>
+                </div>
+              ` : html`
+                <!-- Message Bubbles List -->
+                ${messages.map(msg => html`
+                  <div key=${msg.id} class="message-row ${msg.role === 'user' ? 'user' : 'ai'}">
+                    <div class="message-content-wrapper">
+                      <div class="message-bubble">${msg.content}</div>
+                      
+                      <div class="message-meta-row">
+                        <span>${msg.time}</span>
+                      </div>
+
+                      ${msg.role === 'assistant' ? html`
+                        <div class="assistant-extras-wrap">
+                          <div class="message-actions-row">
+                            <button
+                              class="msg-action-chip"
+                              onClick=${() => handleToggleListen(msg)}
+                              title="Listen (TTS)"
+                            >
+                              ${activeSpeakingId === msg.id ? i18n.stop : i18n.listen}
+                            </button>
+                            <button
+                              class="msg-action-chip"
+                              onClick=${() => handleCopyText(msg)}
+                              title="Copy message"
+                            >
+                              ${i18n.copy}
+                            </button>
+                            <button
+                              class="msg-action-chip"
+                              onClick=${() => handleToggleTranslate(msg)}
+                              title="Translate to English"
+                            >
+                              ${i18n.translate}
+                            </button>
+                            <button
+                              class="msg-action-chip"
+                              onClick=${() => handleShareWeather(msg)}
+                              title="Share formatted weather"
+                            >
+                              ${i18n.share}
+                            </button>
+                          </div>
+
+                          ${translatedMap[msg.id] ? html`
+                            <div class="translation-box">
+                              <div class="translation-header">🇬🇧 English Translation:</div>
+                              <div class="translation-text">${translatedMap[msg.id]}</div>
+                            </div>
+                          ` : null}
+                        </div>
+                      ` : null}
+                    </div>
+                  </div>
+                `)}
+              `}
+
+              <!-- Typing Indicator -->
+              ${isTyping && html`
+                <div class="typing-indicator-row">
+                  <div class="typing-pill">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                  </div>
+                  <span class="typing-label">${i18n.thinking}</span>
+                </div>
+              `}
+
+              <div ref=${chatBottomRef} />
+            </div>
+
+            <!-- Quick Suggestion Chips (Localized to Native Script) -->
+            <div class="quick-chips-wrapper" id="quick-chips-wrapper">
+              ${(i18n.chips[selectedPersona] || []).map((chip, idx) => html`
+                <button
+                  key=${chip}
+                  id="quick-chip-${idx}"
+                  class="quick-chip-btn"
+                  onClick=${() => handleSendMessage(chip)}
+                >
+                  ${chip}
+                </button>
+              `)}
+            </div>
+
+            <!-- Chat Input Bar -->
+            <div class="chat-input-bar">
+              <div class="input-inner-wrapper">
+                <textarea
+                  ref=${inputAreaRef}
+                  id="chat-textarea"
+                  class="message-textarea"
+                  placeholder=${i18n.inputPlaceholder}
+                  rows="1"
+                  maxLength="200"
+                  value=${textInput}
+                  onInput=${handleTextareaInput}
+                  onKeyDown=${handleInputKeyDown}
+                  disabled=${isSending}
+                ></textarea>
+                <span class="char-limit-indicator ${textInput.length >= 180 ? 'danger' : ''}">
+                  ${textInput.length}/200
+                </span>
+              </div>
+              
+              <!-- Microphone Voice Button -->
+              <button
+                id="mic-voice-btn"
+                class="icon-round-btn mic-record-btn ${micStatus}"
+                onClick=${handleToggleMicrophone}
+                title="Voice Input (Press Ctrl+M)"
+              >
+                ${micStatus === 'recording' ? '🔴' : micStatus === 'processing' ? '⏳' : '🎤'}
+              </button>
+
+              <!-- Send Button -->
+              <button
+                id="send-message-btn"
+                class="icon-round-btn send-msg-btn"
+                onClick=${() => handleSendMessage(textInput)}
+                disabled=${isSending || !textInput.trim()}
+                title="Send Message"
+              >
+                ${isSending ? '⏳' : '➤'}
+              </button>
+            </div>
+
+            <!-- Forecast Panels Toggle Bar -->
+            <div class="forecast-toggles-bar">
+              <button
+                id="toggle-7day-forecast"
+                class="toggle-forecast-btn ${showSevenDay ? 'active' : ''}"
+                onClick=${() => { setShowSevenDay(!showSevenDay); setShowTwentyFourHr(false); }}
+              >
+                ${i18n.forecast7} ${showSevenDay ? '▲' : '▼'}
+              </button>
+              <button
+                id="toggle-24hr-forecast"
+                class="toggle-forecast-btn ${showTwentyFourHr ? 'active' : ''}"
+                onClick=${() => { setShowTwentyFourHr(!showTwentyFourHr); setShowSevenDay(false); }}
+              >
+                ${i18n.forecast24} ${showTwentyFourHr ? '▲' : '▼'}
+              </button>
+            </div>
+
+            <!-- 7-Day Forecast Panel -->
+            ${showSevenDay && forecast.daily?.length > 0 && html`
+              <div class="forecast-slider-container" id="panel-7day-forecast">
+                ${forecast.daily.map((day, idx) => {
+                  const rainClass = day.precipProb > 60 ? 'high' : day.precipProb > 30 ? 'med' : 'low';
+                  const fillWidth = `${Math.max(day.precipProb, 4)}%`;
+                  return html`
+                    <div key=${idx} class="daily-forecast-card">
+                      <div class="daily-day-label">${formatDayLabel(day.date, idx, selectedLanguage)}</div>
+                      <div class="daily-emoji-icon">${getWeatherEmoji(day.condition)}</div>
+                      <div class="daily-temp-row">
+                        <span>${day.maxTemp}°</span>
+                        <span class="daily-min-temp">/${day.minTemp}°</span>
+                      </div>
+                      <div class="rain-bar-track">
+                        <div class="rain-bar-fill ${rainClass}" style=${{ width: fillWidth }}></div>
+                      </div>
+                      <div class="daily-subtext">💧 ${day.precipProb}% ${i18n.rainChance}</div>
+                      <div class="daily-subtext">💨 ${day.maxWindSpeed} km/h</div>
+                      ${day.sunriseTime && html`
+                        <div class="daily-subtext">🌅 ${formatClockTime(day.sunriseTime)}</div>
+                      `}
+                    </div>
+                  `;
+                })}
+              </div>
+            `}
+
+            <!-- 24-Hour Forecast Panel -->
+            ${showTwentyFourHr && forecast.hourly?.length > 0 && html`
+              <div class="forecast-slider-container" id="panel-24hr-forecast">
+                ${forecast.hourly.map((h, idx) => html`
+                  <div key=${idx} class="hourly-forecast-card">
+                    <div class="hourly-time-label">${formatHourLabel(h.time)}</div>
+                    <div class="hourly-emoji-icon">${getWeatherEmoji(h.condition)}</div>
+                    <div class="hourly-temp-label">${h.temp}°</div>
+                    <div class="hourly-rain-label">💧 ${h.precipProb}%</div>
+                  </div>
+                `)}
+              </div>
+            `}
+          </main>
+
+          <!-- Compare Mode Modal -->
+          ${isCompareOpen && html`
+            <div
+              class="compare-backdrop"
+              id="compare-modal-backdrop"
+              onClick=${(e) => e.target.id === 'compare-modal-backdrop' && setIsCompareOpen(false)}
+            >
+              <div class="compare-modal-box">
+                <div class="compare-modal-header">
+                  <h2 class="compare-modal-title">${i18n.compareTitle}</h2>
+                  <button class="compare-modal-close" onClick=${() => setIsCompareOpen(false)}>✕</button>
+                </div>
+                <div class="compare-cities-grid">
+                  <!-- City 1 -->
+                  <div class="compare-card">
+                    <div class="compare-card-title">📍 ${currentLoc.city} (${i18n.compareCityCurrent})</div>
+                    ${weather ? html`
+                      <div class="compare-metric-row"><span class="metric-label">${i18n.feelsLike}</span><span class="metric-value">${weather.temp}°C</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">${i18n.humidity}</span><span class="metric-value">${weather.humidity}%</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">${i18n.wind}</span><span class="metric-value">${weather.windSpeed} km/h (${weather.windDirection})</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">${i18n.uv}</span><span class="metric-value">${weather.uvIndex}</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">Visibility</span><span class="metric-value">${weather.visibility} km</span></div>
+                    ` : html`<p>Loading weather data...</p>`}
+                  </div>
+
+                  <!-- City 2 -->
+                  <div class="compare-card">
+                    <div class="compare-card-title">🔍 ${i18n.compareCitySecond}</div>
+                    <div class="compare-search-row">
+                      <input
+                        id="compare-input"
+                        class="compare-search-input"
+                        type="text"
+                        placeholder=${i18n.compareInputPlaceholder}
+                        value=${compareCityQuery}
+                        onInput=${e => setCompareCityQuery(e.target.value)}
+                        onKeyDown=${e => e.key === 'Enter' && handleFetchCompareCity(compareCityQuery)}
+                      />
+                      <button
+                        id="compare-submit-btn"
+                        class="compare-submit-btn"
+                        onClick=${() => handleFetchCompareCity(compareCityQuery)}
+                        disabled=${isCompareLoading}
+                      >
+                        ${isCompareLoading ? '⏳' : i18n.compareBtn}
+                      </button>
+                    </div>
+
+                    <!-- Quick Compare Chips -->
+                    <div class="compare-quick-chips">
+                      ${['Mumbai', 'Chennai', 'Kolkata', 'Bengaluru', 'Hyderabad', 'Jaipur'].map(c => html`
+                        <button
+                          key=${c}
+                          class="compare-quick-chip"
+                          onClick=${() => {
+                            setCompareCityQuery(c);
+                            handleFetchCompareCity(c);
+                          }}
+                        >
+                          ${c}
+                        </button>
+                      `)}
+                    </div>
+
+                    ${isCompareLoading ? html`
+                      <p class="compare-loading-text">Fetching meteorological data...</p>
+                    ` : compareWeatherData ? html`
+                      <div class="compare-metric-row"><span class="metric-label">City</span><span class="metric-value">${compareWeatherData.city}</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">${i18n.feelsLike}</span><span class="metric-value">${compareWeatherData.temp}°C</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">${i18n.humidity}</span><span class="metric-value">${compareWeatherData.humidity}%</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">${i18n.wind}</span><span class="metric-value">${compareWeatherData.windSpeed} km/h (${compareWeatherData.windDirection})</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">${i18n.uv}</span><span class="metric-value">${compareWeatherData.uvIndex}</span></div>
+                      <div class="compare-metric-row"><span class="metric-label">Visibility</span><span class="metric-value">${compareWeatherData.visibility} km</span></div>
+                    ` : html`
+                      <p class="compare-hint-text">
+                        Type any Indian city name and click Compare or select a preset above.
+                      </p>
+                    `}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `}
+
+          <!-- Settings Modal -->
+          ${isSettingsOpen && html`
+            <div
+              class="compare-backdrop"
+              id="settings-modal-backdrop"
+              onClick=${(e) => e.target.id === 'settings-modal-backdrop' && setIsSettingsOpen(false)}
+            >
+              <div class="settings-modal-box">
+                <div class="compare-modal-header">
+                  <h2 class="compare-modal-title">⚙️ AI Model & API Configuration</h2>
+                  <button class="compare-modal-close" onClick=${() => setIsSettingsOpen(false)}>✕</button>
+                </div>
+                <p class="settings-desc">
+                  Connect any real LLM provider for live, 100% dynamic conversational responses in native Indian scripts. If no key is set, WeatherGPT uses our high-fidelity local intent engine.
+                </p>
+
+                <label class="settings-label">Google Gemini API Key (Recommended)</label>
+                <input
+                  type="password"
+                  class="settings-input"
+                  placeholder="AIzaSy..."
+                  value=${geminiKeyInput}
+                  onInput=${e => setGeminiKeyInput(e.target.value)}
+                />
+
+                <label class="settings-label">Anthropic Claude API Key</label>
+                <input
+                  type="password"
+                  class="settings-input"
+                  placeholder="sk-ant-..."
+                  value=${claudeKeyInput}
+                  onInput=${e => setClaudeKeyInput(e.target.value)}
+                />
+
+                <label class="settings-label">OpenAI / Groq API Key</label>
+                <input
+                  type="password"
+                  class="settings-input"
+                  placeholder="sk-..."
+                  value=${openaiKeyInput}
+                  onInput=${e => setOpenaiKeyInput(e.target.value)}
+                />
+
+                <div class="settings-actions">
+                  <button class="header-btn" onClick=${() => setIsSettingsOpen(false)}>Cancel</button>
+                  <button
+                    class="header-btn active"
+                    onClick=${() => {
+                      const cKey = claudeKeyInput.trim();
+                      const gKey = geminiKeyInput.trim();
+                      const oKey = openaiKeyInput.trim();
+
+                      CONFIG.CLAUDE_API_KEY = cKey;
+                      CONFIG.GEMINI_API_KEY = gKey;
+                      CONFIG.OPENAI_API_KEY = oKey;
+
+                      localStorage.setItem('weathergpt_claude_key', cKey);
+                      localStorage.setItem('weathergpt_gemini_key', gKey);
+                      localStorage.setItem('weathergpt_openai_key', oKey);
+
+                      setIsSettingsOpen(false);
+                      if (gKey || cKey || oKey) {
+                        showToast('✅ Live AI Model activated!');
+                      } else {
+                        showToast('ℹ️ Local intelligent engine active.');
+                      }
+                    }}
+                  >
+                    Save & Activate
+                  </button>
+                </div>
+              </div>
+            </div>
+          `}
+
+          <!-- Floating Toast Notification -->
+          ${toastMsg && html`
+            <div class="toast-notification">
+              <span>${toastMsg}</span>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    // Error Boundary Component
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      componentDidCatch(error, errorInfo) {
+        console.error('WeatherGPT UI Error:', error, errorInfo);
+      }
+      render() {
+        if (this.state.hasError) {
+          return html`
+            <div style=${{ padding: '40px 20px', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
+              <h2 style=${{ color: '#C62828' }}>⚠️ Something went wrong</h2>
+              <p style=${{ color: '#546E7A', margin: '12px 0 24px' }}>${this.state.error?.message || 'An unexpected error occurred.'}</p>
+              <button
+                class="header-btn active"
+                onClick=${() => window.location.reload()}
+              >
+                Reload WeatherGPT
+              </button>
+            </div>
+          `;
+        }
+        return this.props.children;
+      }
+    }
+
+    // Mount Application
+    const appMountElement = document.getElementById('root');
+    const reactRoot = createRoot(appMountElement);
+    reactRoot.render(React.createElement(ErrorBoundary, null, React.createElement(WeatherGptApp)));
+  </script>
+</body>
+</html>

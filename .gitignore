@@ -1,0 +1,4 @@
+node_modules/
+.vite/
+.vercel/
+.DS_Store
