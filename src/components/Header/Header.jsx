@@ -31,14 +31,6 @@ export default function Header({
           {i18n.compare}
         </button>
         <button
-          id="settings-btn"
-          className="header-btn"
-          onClick={onOpenSettings}
-          title="Configure API Keys (Claude / Gemini / OpenAI)"
-        >
-          {i18n.settings}
-        </button>
-        <button
           id="clear-chat-btn"
           className="header-btn"
           onClick={onClearChat}

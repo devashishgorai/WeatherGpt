@@ -357,7 +357,6 @@ export default function WeatherGptHome() {
             isCompareOpen={isCompareOpen}
             onOpenCompare={() => setIsCompareOpen(true)}
             onClearChat={handleClearConversation}
-            onOpenSettings={() => setIsSettingsOpen(true)}
           />
 
           {/* Chat Messages */}
@@ -442,13 +441,6 @@ export default function WeatherGptHome() {
           currentLoc={currentLoc}
           weather={weather}
           i18n={i18n}
-          showToast={showToast}
-        />
-
-        {/* Settings Modal */}
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
           showToast={showToast}
         />
 

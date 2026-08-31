@@ -52,25 +52,6 @@ export default function Sidebar({
             onKeyDown={(e) => e.key === 'Enter' && onSearch(searchInput)}
           />
         </div>
-        <button
-          id="detect-location-btn"
-          className={`detect-loc-btn ${gpsState === 'granted' ? 'gps-granted' : gpsState === 'denied' ? 'gps-denied' : ''}`}
-          onClick={onDetectLocation}
-          disabled={isDetectingLoc || gpsState === 'waiting'}
-          title={
-            gpsState === 'granted' ? 'GPS Active — click to re-detect' :
-            gpsState === 'denied'  ? 'GPS denied — click to try again'  :
-            gpsState === 'waiting' ? 'Detecting GPS location…' :
-            'Detect my GPS location'
-          }
-        >
-          {
-            gpsState === 'waiting'  ? i18n.detecting :
-            gpsState === 'granted'  ? ('✅ GPS: ' + currentLoc.city) :
-            gpsState === 'denied'   ? '❌ GPS denied — retry?' :
-            i18n.detectLoc
-          }
-        </button>
         <div className="current-location-tag">
           <span className="pulse-dot"></span>
           <div className="current-location-info">
