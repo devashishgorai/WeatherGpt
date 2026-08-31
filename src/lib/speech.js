@@ -1,13 +1,13 @@
 import { LANG_CODES } from './constants';
 import { CONFIG } from './config';
 
-/* ===== TEXT PREPROCESSING FOR NATURAL HUMAN SPEECH ===== */
+/* ===== COMPREHENSIVE TEXT PREPROCESSING FOR NATURAL HUMAN SPEECH ===== */
 export function cleanTextForSpeech(rawText, language = 'english') {
   if (!rawText) return '';
 
-  let text = rawText;
+  let text = String(rawText);
 
-  // 1. Remove Markdown formatting (bold, italic, headers, blockquotes, bullets)
+  // 1. Remove Markdown formatting (bold, italic, headers, blockquotes, bullets, links)
   text = text.replace(/\*\*(.*?)\*\*/g, '$1');
   text = text.replace(/\*(.*?)\*/g, '$1');
   text = text.replace(/_(.*?)_/g, '$1');
@@ -16,56 +16,79 @@ export function cleanTextForSpeech(rawText, language = 'english') {
   text = text.replace(/^\s*[-*•]\s+/gm, '');
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
 
-  // 2. Remove all Unicode emojis and weather symbols
-  text = text.replace(/[\u{1F300}-\u{1FAD6}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{200D}]/gu, '');
+  // 2. Strip ALL Unicode emojis, pictographs, weather symbols, and variation selectors
+  text = text.replace(/\p{Extended_Pictographic}/gu, '');
+  text = text.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '');
 
-  // 3. Expand weather shorthand units to natural spoken words per language
+  // 3. Remove Compass Direction acronyms that sound awkward in Indian languages (e.g. ESE, WNW, SSE)
+  text = text.replace(/\b(ESE|WNW|NNE|SSE|NNW|SSW|ENE|WSW|NW|NE|SW|SE|N|S|E|W)\b/g, '');
+
+  // 4. Expand meteorological units and shorthand to natural conversational phrasing
   if (language === 'bengali') {
     text = text.replace(/(\d+)\s*°C/g, '$1 ডিগ্রি সেলসিয়াস');
     text = text.replace(/(\d+)\s*°/g, '$1 ডিগ্রি');
     text = text.replace(/(\d+)\s*%/g, '$1 শতাংশ');
     text = text.replace(/(\d+)\s*(?:কিমি\/ঘণ্টা|km\/h|kmph)/gi, '$1 কিলোমিটার প্রতি ঘণ্টা');
-    text = text.replace(/\bUV:\s*/gi, 'ইউভি সূচক ');
-    text = text.replace(/\b(ESE|WNW|NNE|SSE|NNW|SSW|ENE|WSW|NW|NE|SW|SE|N|S|E|W)\b/g, '');
+    text = text.replace(/\bUV\s*:\s*/gi, 'ইউভি সূচক ');
+    text = text.replace(/\bUV\b/gi, 'ইউভি সূচক');
   } else if (language === 'hindi') {
     text = text.replace(/(\d+)\s*°C/g, '$1 डिग्री सेल्सियस');
     text = text.replace(/(\d+)\s*°/g, '$1 डिग्री');
     text = text.replace(/(\d+)\s*%/g, '$1 प्रतिशत');
     text = text.replace(/(\d+)\s*(?:किमी\/घंटा|km\/h|kmph)/gi, '$1 किलोमीटर प्रति घंटा');
-    text = text.replace(/\bUV:\s*/gi, 'यूवी इंडेक्स ');
-    text = text.replace(/\b(ESE|WNW|NNE|SSE|NNW|SSW|ENE|WSW|NW|NE|SW|SE|N|S|E|W)\b/g, '');
+    text = text.replace(/\bUV\s*:\s*/gi, 'यूवी इंडेक्स ');
+    text = text.replace(/\bUV\b/gi, 'यूवी इंडेक्स');
   } else if (language === 'tamil') {
     text = text.replace(/(\d+)\s*°C/g, '$1 டிகிரி செல்சியஸ்');
     text = text.replace(/(\d+)\s*°/g, '$1 டிகிரி');
     text = text.replace(/(\d+)\s*%/g, '$1 சதவீதம்');
     text = text.replace(/(\d+)\s*(?:கிமீ\/மணி|km\/h|kmph)/gi, '$1 கிலோமீட்டர் வேகம்');
+    text = text.replace(/\bUV\s*:\s*/gi, 'யுவி குறியீடு ');
   } else if (language === 'telugu') {
     text = text.replace(/(\d+)\s*°C/g, '$1 డిగ్రీల సెల్సియస్');
     text = text.replace(/(\d+)\s*°/g, '$1 డిగ్రీలు');
     text = text.replace(/(\d+)\s*%/g, '$1 శాతం');
     text = text.replace(/(\d+)\s*(?:కి\.మీ\/గం|km\/h|kmph)/gi, '$1 కిలోమీటర్ల వేగం');
+    text = text.replace(/\bUV\s*:\s*/gi, 'యువి సూచిక ');
   } else if (language === 'marathi') {
     text = text.replace(/(\d+)\s*°C/g, '$1 अंश सेल्सिअस');
     text = text.replace(/(\d+)\s*°/g, '$1 अंश');
     text = text.replace(/(\d+)\s*%/g, '$1 टक्के');
     text = text.replace(/(\d+)\s*(?:किमी\/तास|km\/h|kmph)/gi, '$1 किलोमीटर प्रति तास');
+    text = text.replace(/\bUV\s*:\s*/gi, 'यूव्ही निर्देशांक ');
   } else {
     // English
     text = text.replace(/(\d+)\s*°C/g, '$1 degrees Celsius');
     text = text.replace(/(\d+)\s*°/g, '$1 degrees');
     text = text.replace(/(\d+)\s*%/g, '$1 percent');
     text = text.replace(/(\d+)\s*(?:km\/h|kmph)/gi, '$1 kilometers per hour');
-    text = text.replace(/\bUV:\s*/gi, 'UV index ');
+    text = text.replace(/\bUV\s*:\s*/gi, 'UV index ');
   }
 
-  // 4. Clean up whitespace, excess hyphens, and ensure natural sentence pauses
-  text = text.replace(/[\n\r]+/g, '. ');
-  text = text.replace(/[|—–_]+/g, ', ');
-  text = text.replace(/\s*([,.:;?!])\s*/g, '$1 ');
-  text = text.replace(/\.{2,}/g, '.');
-  text = text.replace(/\s{2,}/g, ' ');
+  // 5. Clean colons, parentheses, extra punctuation to create smooth natural pauses
+  text = text.replace(/[:：]/g, ' ');
+  text = text.replace(/[()（）]/g, ', ');
+  text = text.replace(/[|—–_~]+/g, ', ');
 
   return text.trim();
+}
+
+/* ===== SPLIT TEXT INTO NATURAL SENTENCE CHUNKS ===== */
+export function splitIntoSentences(text) {
+  if (!text) return [];
+
+  // Split by line breaks, periods, question marks, exclamation marks, or Hindi/Bengali purna viram (।)
+  const rawSegments = text.split(/[\n\r।|!?]+|\.\s+/);
+
+  const sentences = [];
+  for (const seg of rawSegments) {
+    const clean = seg.replace(/\s+/g, ' ').trim();
+    if (clean.length > 0) {
+      sentences.push(clean);
+    }
+  }
+
+  return sentences;
 }
 
 /* ===== BEST HUMAN-LIKE NEURAL VOICE SELECTOR ===== */
@@ -130,9 +153,9 @@ export async function playOpenAiNeuralTts(text, language = 'english') {
       },
       body: JSON.stringify({
         model: 'tts-1',
-        input: text.slice(0, 1000),
+        input: text.slice(0, 2000),
         voice: 'nova', // Warm, expressive, human-like voice
-        speed: 0.96
+        speed: 0.95
       })
     });
 
@@ -148,35 +171,72 @@ export async function playOpenAiNeuralTts(text, language = 'english') {
   }
 }
 
-/* ===== MASTER TRIGGER SPEECH WITH HUMAN CADENCE ===== */
-export function triggerTtsSpeech(rawText, language = 'english', onEndCallback) {
+/* ===== UNINTERRUPTED SEQUENTIAL SPEECH ENGINE ===== */
+export function playSequentialSpeech(rawText, language = 'english', onEndCallback) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
 
   window.speechSynthesis.cancel();
 
-  // 1. Clean the text (strip emojis, markdown, expand units to spoken words)
+  // 1. Clean the full text
   const cleanScript = cleanTextForSpeech(rawText, language);
   if (!cleanScript) return null;
 
-  const utterance = new SpeechSynthesisUtterance(cleanScript);
-  const langCode = LANG_CODES[language] || 'en-IN';
-  utterance.lang = langCode;
+  // 2. Split into clean individual sentences
+  const sentences = splitIntoSentences(cleanScript);
+  if (sentences.length === 0) return null;
 
-  // 2. Select the most natural human neural voice available
   const bestVoice = findBestHumanVoice(language);
-  if (bestVoice) {
-    utterance.voice = bestVoice;
+  const langCode = LANG_CODES[language] || 'en-IN';
+
+  let currentIndex = 0;
+  let isCancelled = false;
+
+  function speakNext() {
+    if (isCancelled) return;
+
+    if (currentIndex >= sentences.length) {
+      if (onEndCallback) onEndCallback();
+      return;
+    }
+
+    const sentence = sentences[currentIndex];
+    const utterance = new SpeechSynthesisUtterance(sentence);
+    utterance.lang = langCode;
+
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+    }
+
+    // Natural human cadence
+    utterance.rate = 0.94;
+    utterance.pitch = 1.02;
+
+    utterance.onend = () => {
+      if (!isCancelled) {
+        currentIndex++;
+        speakNext();
+      }
+    };
+
+    utterance.onerror = (err) => {
+      console.warn('Speech chunk error:', err);
+      if (!isCancelled) {
+        currentIndex++;
+        speakNext();
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
   }
 
-  // 3. Human cadence tuning (pitch 1.02, speed 0.94 for natural breathing cadence)
-  utterance.rate = 0.94;
-  utterance.pitch = 1.02;
+  // Start sequential playback
+  speakNext();
 
-  if (onEndCallback) {
-    utterance.onend = onEndCallback;
-    utterance.onerror = onEndCallback;
-  }
-
-  window.speechSynthesis.speak(utterance);
-  return utterance;
+  return {
+    cancel: () => {
+      isCancelled = true;
+      window.speechSynthesis.cancel();
+      if (onEndCallback) onEndCallback();
+    }
+  };
 }

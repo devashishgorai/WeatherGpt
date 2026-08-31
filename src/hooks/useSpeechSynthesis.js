@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { triggerTtsSpeech, playOpenAiNeuralTts, cleanTextForSpeech } from '@/lib/speech';
+import { playSequentialSpeech, playOpenAiNeuralTts, cleanTextForSpeech } from '@/lib/speech';
 import { CONFIG } from '@/lib/config';
 
 export function useSpeechSynthesis(selectedLanguage) {
   const [activeSpeakingId, setActiveSpeakingId] = useState(null);
   const activeAudioRef = useRef(null);
+  const speechPlayerRef = useRef(null);
 
   // Pre-fetch voices on mount so high quality neural voices are available immediately
   useEffect(() => {
@@ -29,6 +30,10 @@ export function useSpeechSynthesis(selectedLanguage) {
 
     // 1. If currently speaking this message -> stop
     if (activeSpeakingId === msg.id) {
+      if (speechPlayerRef.current) {
+        speechPlayerRef.current.cancel();
+        speechPlayerRef.current = null;
+      }
       if (activeAudioRef.current) {
         activeAudioRef.current.pause();
         activeAudioRef.current = null;
@@ -40,7 +45,11 @@ export function useSpeechSynthesis(selectedLanguage) {
       return;
     }
 
-    // 2. Stop any existing speech
+    // 2. Stop any existing playback
+    if (speechPlayerRef.current) {
+      speechPlayerRef.current.cancel();
+      speechPlayerRef.current = null;
+    }
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
       activeAudioRef.current = null;
@@ -74,12 +83,15 @@ export function useSpeechSynthesis(selectedLanguage) {
       }
     }
 
-    // 4. Enhanced Human-Cadence Natural Browser Speech Synthesis
-    const utterance = triggerTtsSpeech(msg.content, selectedLanguage, () => {
+    // 4. Enhanced Sequential Browser Speech Synthesis (Reads all sentences without cutting off)
+    const player = playSequentialSpeech(msg.content, selectedLanguage, () => {
       setActiveSpeakingId(null);
+      speechPlayerRef.current = null;
     });
 
-    if (!utterance) {
+    if (player) {
+      speechPlayerRef.current = player;
+    } else {
       setActiveSpeakingId(null);
     }
   }, [activeSpeakingId, selectedLanguage]);
