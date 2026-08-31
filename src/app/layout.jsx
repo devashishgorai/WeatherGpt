@@ -3,6 +3,9 @@ import './globals.css';
 export const metadata = {
   title: 'WeatherGPT — Aapka Mausam, Aapki Bhasha',
   description: 'WeatherGPT: AI-powered conversational weather assistant for India in authentic native Indian scripts: Hindi (हिंदी), Bengali (বাংলা), Tamil (தமிழ்), Telugu (తెలుగు), Marathi (मराठी), and English.',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export const viewport = {
