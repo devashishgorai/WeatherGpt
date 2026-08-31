@@ -1,5 +1,5 @@
-import { CONFIG } from './config';
-import { WMO_WEATHER_TABLE, LANG_CODES } from './constants';
+import { CONFIG } from './config.js';
+import { WMO_WEATHER_TABLE, LANG_CODES } from './constants.js';
 
 /* ===== HELPER FUNCTIONS ===== */
 export function getWmoData(code) {
