@@ -20,7 +20,7 @@ export function cleanTextForSpeech(rawText, language = 'english') {
   text = text.replace(/\p{Extended_Pictographic}/gu, '');
   text = text.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '');
 
-  // 3. Remove Compass Direction acronyms that sound awkward in Indian languages (e.g. ESE, WNW, SSE)
+  // 3. Remove Compass Direction acronyms (e.g. ESE, WNW, SSE)
   text = text.replace(/\b(ESE|WNW|NNE|SSE|NNW|SSW|ENE|WSW|NW|NE|SW|SE|N|S|E|W)\b/g, '');
 
   // 4. Expand meteorological units and shorthand to natural conversational phrasing
@@ -65,7 +65,7 @@ export function cleanTextForSpeech(rawText, language = 'english') {
     text = text.replace(/\bUV\s*:\s*/gi, 'UV index ');
   }
 
-  // 5. Clean colons, parentheses, extra punctuation to create smooth natural pauses
+  // 5. Clean colons and parentheses for smooth voice flow
   text = text.replace(/[:：]/g, ' ');
   text = text.replace(/[()（）]/g, ', ');
   text = text.replace(/[|—–_~]+/g, ', ');
@@ -73,71 +73,102 @@ export function cleanTextForSpeech(rawText, language = 'english') {
   return text.trim();
 }
 
-/* ===== SPLIT TEXT INTO NATURAL SENTENCE CHUNKS ===== */
+/* ===== SPLIT TEXT INTO NATURAL SPOKEN SENTENCES ===== */
 export function splitIntoSentences(text) {
   if (!text) return [];
-
-  // Split by line breaks, periods, question marks, exclamation marks, or Hindi/Bengali purna viram (।)
   const rawSegments = text.split(/[\n\r।|!?]+|\.\s+/);
-
-  const sentences = [];
-  for (const seg of rawSegments) {
-    const clean = seg.replace(/\s+/g, ' ').trim();
-    if (clean.length > 0) {
-      sentences.push(clean);
-    }
-  }
-
-  return sentences;
+  return rawSegments
+    .map(s => s.replace(/\s+/g, ' ').trim())
+    .filter(s => s.length > 0);
 }
 
-/* ===== BEST HUMAN-LIKE NEURAL VOICE SELECTOR ===== */
-export function findBestHumanVoice(language = 'english') {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+/* ===== HIGH-FIDELITY NATIVE AUDIO STREAM PLAYER ===== */
+export function playNativeIndianSpeech(rawText, language = 'english', onEndCallback) {
+  if (typeof window === 'undefined') return null;
 
-  const voices = window.speechSynthesis.getVoices();
-  if (!voices || voices.length === 0) return null;
+  const cleanScript = cleanTextForSpeech(rawText, language);
+  if (!cleanScript) return null;
 
-  const targetLangCode = (LANG_CODES[language] || 'en-IN').toLowerCase();
-  const langPrefix = targetLangCode.split('-')[0];
+  const sentences = splitIntoSentences(cleanScript);
+  if (sentences.length === 0) return null;
 
-  // Candidates matching language code or prefix
-  const matchingVoices = voices.filter(v => {
-    const vLang = (v.lang || '').toLowerCase().replace('_', '-');
-    return vLang === targetLangCode || vLang.startsWith(langPrefix);
-  });
+  let currentIndex = 0;
+  let isCancelled = false;
+  let currentAudio = null;
 
-  if (matchingVoices.length === 0) {
-    // Fallback: look for Indian English or high quality English voice
-    return voices.find(v => v.lang.includes('en-IN') || v.name.includes('Natural') || v.name.includes('Google')) || voices[0];
+  function playNextSentence() {
+    if (isCancelled) return;
+
+    if (currentIndex >= sentences.length) {
+      if (onEndCallback) onEndCallback();
+      return;
+    }
+
+    const sentence = sentences[currentIndex];
+    const audioUrl = `/api/tts?text=${encodeURIComponent(sentence)}&lang=${encodeURIComponent(language)}`;
+    const audio = new Audio(audioUrl);
+    currentAudio = audio;
+
+    audio.onended = () => {
+      if (!isCancelled) {
+        currentIndex++;
+        playNextSentence();
+      }
+    };
+
+    audio.onerror = (e) => {
+      console.warn('Native audio stream fallback to browser voice for chunk:', sentence, e);
+      // Fallback to browser SpeechSynthesis for this chunk if audio fails
+      if (!isCancelled) {
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(sentence);
+          utterance.lang = LANG_CODES[language] || 'en-IN';
+          utterance.onend = () => {
+            if (!isCancelled) {
+              currentIndex++;
+              playNextSentence();
+            }
+          };
+          utterance.onerror = () => {
+            if (!isCancelled) {
+              currentIndex++;
+              playNextSentence();
+            }
+          };
+          window.speechSynthesis.speak(utterance);
+        } else {
+          currentIndex++;
+          playNextSentence();
+        }
+      }
+    };
+
+    audio.play().catch(playErr => {
+      console.warn('Audio play error (user interaction or audio blocked):', playErr);
+      if (!isCancelled) {
+        currentIndex++;
+        playNextSentence();
+      }
+    });
   }
 
-  // Rank matching voices by naturalness & neural capability:
-  // 1. "Online (Natural)" or "Neural" (Microsoft Edge / Windows 11 Natural Voices)
-  const naturalVoice = matchingVoices.find(v => 
-    v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Online')
-  );
-  if (naturalVoice) return naturalVoice;
+  // Start sequential audio playback
+  playNextSentence();
 
-  // 2. Google High-Definition Voices (Chrome)
-  const googleVoice = matchingVoices.find(v => 
-    v.name.toLowerCase().includes('google')
-  );
-  if (googleVoice) return googleVoice;
-
-  // 3. Apple/Siri Premium Voices (macOS/iOS)
-  const premiumVoice = matchingVoices.find(v => 
-    v.name.toLowerCase().includes('premium') || v.name.toLowerCase().includes('enhanced') || v.name.toLowerCase().includes('siri')
-  );
-  if (premiumVoice) return premiumVoice;
-
-  // 4. Exact locale match (e.g. bn-IN, hi-IN, ta-IN, te-IN, mr-IN)
-  const exactLocaleVoice = matchingVoices.find(v => 
-    v.lang.toLowerCase().replace('_', '-') === targetLangCode
-  );
-  if (exactLocaleVoice) return exactLocaleVoice;
-
-  return matchingVoices[0];
+  return {
+    cancel: () => {
+      isCancelled = true;
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.src = '';
+        currentAudio = null;
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (onEndCallback) onEndCallback();
+    }
+  };
 }
 
 /* ===== STUDIO NEURAL TTS (OpenAI TTS Engine Fallback) ===== */
@@ -154,7 +185,7 @@ export async function playOpenAiNeuralTts(text, language = 'english') {
       body: JSON.stringify({
         model: 'tts-1',
         input: text.slice(0, 2000),
-        voice: 'nova', // Warm, expressive, human-like voice
+        voice: 'nova',
         speed: 0.95
       })
     });
@@ -166,77 +197,7 @@ export async function playOpenAiNeuralTts(text, language = 'english') {
     const audio = new Audio(audioUrl);
     return audio;
   } catch (err) {
-    console.warn('OpenAI TTS failed, falling back to browser speech:', err);
+    console.warn('OpenAI TTS failed, falling back to native audio:', err);
     return null;
   }
-}
-
-/* ===== UNINTERRUPTED SEQUENTIAL SPEECH ENGINE ===== */
-export function playSequentialSpeech(rawText, language = 'english', onEndCallback) {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
-
-  window.speechSynthesis.cancel();
-
-  // 1. Clean the full text
-  const cleanScript = cleanTextForSpeech(rawText, language);
-  if (!cleanScript) return null;
-
-  // 2. Split into clean individual sentences
-  const sentences = splitIntoSentences(cleanScript);
-  if (sentences.length === 0) return null;
-
-  const bestVoice = findBestHumanVoice(language);
-  const langCode = LANG_CODES[language] || 'en-IN';
-
-  let currentIndex = 0;
-  let isCancelled = false;
-
-  function speakNext() {
-    if (isCancelled) return;
-
-    if (currentIndex >= sentences.length) {
-      if (onEndCallback) onEndCallback();
-      return;
-    }
-
-    const sentence = sentences[currentIndex];
-    const utterance = new SpeechSynthesisUtterance(sentence);
-    utterance.lang = langCode;
-
-    if (bestVoice) {
-      utterance.voice = bestVoice;
-    }
-
-    // Natural human cadence
-    utterance.rate = 0.94;
-    utterance.pitch = 1.02;
-
-    utterance.onend = () => {
-      if (!isCancelled) {
-        currentIndex++;
-        speakNext();
-      }
-    };
-
-    utterance.onerror = (err) => {
-      console.warn('Speech chunk error:', err);
-      if (!isCancelled) {
-        currentIndex++;
-        speakNext();
-      }
-    };
-
-    window.speechSynthesis.speak(utterance);
-  }
-
-  // Start sequential playback
-  speakNext();
-
-  return {
-    cancel: () => {
-      isCancelled = true;
-      window.speechSynthesis.cancel();
-      if (onEndCallback) onEndCallback();
-    }
-  };
 }

@@ -1,41 +1,26 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { playSequentialSpeech, playOpenAiNeuralTts, cleanTextForSpeech } from '@/lib/speech';
+import { useState, useCallback, useRef } from 'react';
+import { playNativeIndianSpeech, playOpenAiNeuralTts, cleanTextForSpeech } from '@/lib/speech';
 import { CONFIG } from '@/lib/config';
 
 export function useSpeechSynthesis(selectedLanguage) {
   const [activeSpeakingId, setActiveSpeakingId] = useState(null);
   const activeAudioRef = useRef(null);
-  const speechPlayerRef = useRef(null);
-
-  // Pre-fetch voices on mount so high quality neural voices are available immediately
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.getVoices();
-      const onVoicesChanged = () => {
-        window.speechSynthesis.getVoices();
-      };
-      window.speechSynthesis.onvoiceschanged = onVoicesChanged;
-      return () => {
-        if (window.speechSynthesis) {
-          window.speechSynthesis.onvoiceschanged = null;
-        }
-      };
-    }
-  }, []);
+  const speechControllerRef = useRef(null);
 
   const toggleListen = useCallback(async (msg) => {
     if (typeof window === 'undefined') return;
 
     // 1. If currently speaking this message -> stop
     if (activeSpeakingId === msg.id) {
-      if (speechPlayerRef.current) {
-        speechPlayerRef.current.cancel();
-        speechPlayerRef.current = null;
+      if (speechControllerRef.current) {
+        speechControllerRef.current.cancel();
+        speechControllerRef.current = null;
       }
       if (activeAudioRef.current) {
         activeAudioRef.current.pause();
+        activeAudioRef.current.src = '';
         activeAudioRef.current = null;
       }
       if ('speechSynthesis' in window) {
@@ -46,12 +31,13 @@ export function useSpeechSynthesis(selectedLanguage) {
     }
 
     // 2. Stop any existing playback
-    if (speechPlayerRef.current) {
-      speechPlayerRef.current.cancel();
-      speechPlayerRef.current = null;
+    if (speechControllerRef.current) {
+      speechControllerRef.current.cancel();
+      speechControllerRef.current = null;
     }
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
+      activeAudioRef.current.src = '';
       activeAudioRef.current = null;
     }
     if ('speechSynthesis' in window) {
@@ -79,18 +65,18 @@ export function useSpeechSynthesis(selectedLanguage) {
           return;
         }
       } catch (err) {
-        console.warn('OpenAI Neural speech fallback to browser voice:', err);
+        console.warn('OpenAI Neural speech fallback to native Indian audio:', err);
       }
     }
 
-    // 4. Enhanced Sequential Browser Speech Synthesis (Reads all sentences without cutting off)
-    const player = playSequentialSpeech(msg.content, selectedLanguage, () => {
+    // 4. Fluent Native Indian Audio Stream Player (Reads full Bengali, Hindi, Tamil, Telugu, Marathi, English)
+    const controller = playNativeIndianSpeech(msg.content, selectedLanguage, () => {
       setActiveSpeakingId(null);
-      speechPlayerRef.current = null;
+      speechControllerRef.current = null;
     });
 
-    if (player) {
-      speechPlayerRef.current = player;
+    if (controller) {
+      speechControllerRef.current = controller;
     } else {
       setActiveSpeakingId(null);
     }
