@@ -1449,7 +1449,149 @@
       margin-top: 8px;
     }
 
+    /* ===== GPS PERMISSION OVERLAY ===== */
+    .gps-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(13, 27, 94, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .gps-card {
+      background: #FFFFFF;
+      border-radius: 24px;
+      padding: 36px 40px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+      animation: gpsCardIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes gpsCardIn {
+      from { transform: scale(0.85) translateY(30px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .gps-icon-ring {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      margin: 0 auto 20px;
+      box-shadow: 0 8px 24px rgba(21, 101, 192, 0.18);
+      animation: gpsIconPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes gpsIconPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(21,101,192,0.18); }
+      50%       { transform: scale(1.07); box-shadow: 0 12px 32px rgba(21,101,192,0.32); }
+    }
+
+    .gps-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.4px;
+      margin-bottom: 10px;
+    }
+
+    .gps-subtitle {
+      font-size: 14px;
+      color: var(--text-light);
+      line-height: 1.55;
+      margin-bottom: 28px;
+    }
+
+    .gps-allow-btn {
+      width: 100%;
+      padding: 13px 20px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #FFFFFF;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: var(--font-family);
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: all var(--anim-normal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(21,101,192,0.3);
+    }
+
+    .gps-allow-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(21,101,192,0.42);
+    }
+
+    .gps-allow-btn:active { transform: translateY(0); }
+
+    .gps-deny-btn {
+      width: 100%;
+      padding: 11px 20px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--text-light);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: var(--font-family);
+      cursor: pointer;
+      transition: all var(--anim-fast);
+    }
+
+    .gps-deny-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    .gps-privacy-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 16px;
+      line-height: 1.45;
+    }
+
+    .gps-detecting-spinner {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(255,255,255,0.35);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* GPS status indicator on detect button */
+    .detect-loc-btn.gps-granted {
+      border-color: rgba(76,175,80,0.6);
+      background: rgba(76,175,80,0.12);
+      color: rgba(255,255,255,0.95);
+    }
+
+    .detect-loc-btn.gps-denied {
+      border-color: rgba(244,67,54,0.5);
+      background: rgba(244,67,54,0.08);
+    }
+
     /* API Key Settings Modal */
+
     .settings-modal-box {
       background: #FFFFFF;
       border-radius: var(--radius-lg);
@@ -2908,6 +3050,16 @@ Your response style:
       const [searchHistory, setSearchHistory] = useState(['New Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru']);
       const [isDetectingLoc, setIsDetectingLoc] = useState(false);
 
+      // GPS Auto-Detection State
+      // 'prompt'  → show the in-app permission card
+      // 'waiting' → browser permission dialog open / GPS fix in progress
+      // 'granted' → GPS succeeded; overlay hidden
+      // 'denied'  → user denied or error; overlay hidden, fallback city used
+      // 'unsupported' → browser has no geolocation API
+      const [gpsState, setGpsState] = useState(
+        navigator.geolocation ? 'prompt' : 'unsupported'
+      );
+
       // Personas & Language
       const [selectedPersona, setSelectedPersona] = useState('citizen');
       const [selectedLanguage, setSelectedLanguage] = useState('hindi');
@@ -3016,10 +3168,51 @@ Your response style:
         setIsLoadingWeather(false);
       }, [showToast]);
 
-      // Initial Mount
+      // ---- GPS Auto-Detect Helper ----
+      const runGpsDetect = useCallback(async () => {
+        if (!navigator.geolocation) {
+          setGpsState('unsupported');
+          fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+          return;
+        }
+        setGpsState('waiting');
+        setIsDetectingLoc(true);
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            const cityName = await reverseGeocodeCoords(latitude, longitude);
+            setCurrentLoc({ city: cityName, lat: latitude, lng: longitude });
+            setSearchHistory(prev => {
+              const filtered = prev.filter(c => c.toLowerCase() !== cityName.toLowerCase());
+              return [cityName, ...filtered].slice(0, 5);
+            });
+            await fetchWeatherData(latitude, longitude, cityName);
+            setGpsState('granted');
+            setIsDetectingLoc(false);
+            showToast(`📍 Location detected: ${cityName}`);
+          },
+          (err) => {
+            console.warn('GPS auto-detect failed:', err);
+            setGpsState('denied');
+            setIsDetectingLoc(false);
+            // Fallback: load weather for default New Delhi
+            fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+            if (err.code !== 1) { // code 1 = user denied (silent)
+              showToast('⚠️ GPS unavailable. Showing New Delhi by default.');
+            }
+          },
+          { timeout: 12000, maximumAge: 300000, enableHighAccuracy: true }
+        );
+      }, [fetchWeatherData, showToast, currentLoc.lat, currentLoc.lng, currentLoc.city]);
+
+      // Initial Mount — show GPS prompt overlay; if unsupported, load default
       useEffect(() => {
-        fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
-      }, []);
+        if (gpsState === 'unsupported') {
+          fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+        }
+        // When gpsState === 'prompt', the overlay is displayed and we wait for user action.
+        // The overlay buttons call runGpsDetect() or skip to default.
+      }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
       // Auto-populate default compare city on first compare open if empty
       useEffect(() => {
@@ -3089,30 +3282,41 @@ Your response style:
         }
       };
 
-      // Detect Browser Location
+      // Detect Browser Location (manual re-trigger from sidebar button)
       const handleDetectLocation = () => {
         if (!navigator.geolocation) {
           showToast('Geolocation is not supported by your browser.');
           return;
         }
-
+        if (gpsState === 'prompt') {
+          // Re-show the overlay so user can allow
+          setGpsState('prompt');
+          return;
+        }
         setIsDetectingLoc(true);
+        setGpsState('waiting');
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
             const { latitude, longitude } = pos.coords;
             const cityName = await reverseGeocodeCoords(latitude, longitude);
             setCurrentLoc({ city: cityName, lat: latitude, lng: longitude });
+            setSearchHistory(prev => {
+              const filtered = prev.filter(c => c.toLowerCase() !== cityName.toLowerCase());
+              return [cityName, ...filtered].slice(0, 5);
+            });
             fetchWeatherData(latitude, longitude, cityName);
+            setGpsState('granted');
             setIsDetectingLoc(false);
             setMobileSidebarOpen(false);
-            showToast(`📍 Detected: ${cityName}`);
+            showToast(`📍 Location updated: ${cityName}`);
           },
           (err) => {
             console.warn('Geolocation denied/error:', err);
             showToast('⚠️ Location access denied. Please enter city manually.');
+            setGpsState('denied');
             setIsDetectingLoc(false);
           },
-          { timeout: 10000, maximumAge: 300000 }
+          { timeout: 10000, maximumAge: 300000, enableHighAccuracy: true }
         );
       };
 
@@ -3370,6 +3574,58 @@ Your response style:
       /* ===== RENDER UI ===== */
       return html`
         <div class="app-wrapper">
+
+          <!-- GPS PERMISSION OVERLAY -->
+          ${gpsState === 'prompt' && html`
+            <div class="gps-overlay" id="gps-permission-overlay">
+              <div class="gps-card">
+                <div class="gps-icon-ring">📍</div>
+                <h2 class="gps-title">Enable GPS Location</h2>
+                <p class="gps-subtitle">
+                  WeatherGPT can automatically detect your exact location to show
+                  <strong>hyper-local, real-time weather</strong> for where you actually are — no typing needed.
+                </p>
+                <button
+                  id="gps-allow-btn"
+                  class="gps-allow-btn"
+                  onClick=${() => runGpsDetect()}
+                >
+                  🎯 Use My GPS Location
+                </button>
+                <button
+                  id="gps-skip-btn"
+                  class="gps-deny-btn"
+                  onClick=${() => {
+                    setGpsState('denied');
+                    fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+                  }}
+                >
+                  Not now — use New Delhi
+                </button>
+                <p class="gps-privacy-note">
+                  🔒 Your location is used only for weather data and is never stored or shared.
+                </p>
+              </div>
+            </div>
+          `}
+
+          <!-- GPS WAITING OVERLAY -->
+          ${gpsState === 'waiting' && html`
+            <div class="gps-overlay" id="gps-waiting-overlay">
+              <div class="gps-card">
+                <div class="gps-icon-ring">🛰️</div>
+                <h2 class="gps-title">Acquiring GPS Signal…</h2>
+                <p class="gps-subtitle">
+                  Please allow location access in your browser's permission popup.
+                  This usually takes just a few seconds.
+                </p>
+                <div style="display:flex;justify-content:center;margin-top:8px;">
+                  <div class="gps-detecting-spinner"></div>
+                </div>
+              </div>
+            </div>
+          `}
+
           <!-- Mobile Hamburger Toggle -->
           <button
             class="mobile-nav-toggle"
@@ -3414,11 +3670,22 @@ Your response style:
               </div>
               <button
                 id="detect-location-btn"
-                class="detect-loc-btn"
+                class="detect-loc-btn ${gpsState === 'granted' ? 'gps-granted' : gpsState === 'denied' ? 'gps-denied' : ''}"
                 onClick=${handleDetectLocation}
-                disabled=${isDetectingLoc}
+                disabled=${isDetectingLoc || gpsState === 'waiting'}
+                title=${
+                  gpsState === 'granted' ? 'GPS Active — click to re-detect' :
+                  gpsState === 'denied'  ? 'GPS denied — click to try again'  :
+                  gpsState === 'waiting' ? 'Detecting GPS location…' :
+                  'Detect my GPS location'
+                }
               >
-                ${isDetectingLoc ? i18n.detecting : i18n.detectLoc}
+                ${
+                  gpsState === 'waiting'  ? i18n.detecting :
+                  gpsState === 'granted'  ? `✅ GPS: ${currentLoc.city}` :
+                  gpsState === 'denied'   ? '❌ GPS denied — retry?' :
+                  i18n.detectLoc
+                }
               </button>
               <div class="current-location-tag">
                 <span class="pulse-dot"></span>
