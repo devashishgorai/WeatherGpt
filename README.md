@@ -177,7 +177,7 @@ NEXT_PUBLIC_OPENAI_API_KEY=
 ```bash
 npm run dev
 ```
-Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+Open **https://temp-gpt-ten.vercel.app/** in your browser.
 
 ### 5. Build for Production
 ```bash
