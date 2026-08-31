@@ -3619,7 +3619,7 @@ Your response style:
                   Please allow location access in your browser's permission popup.
                   This usually takes just a few seconds.
                 </p>
-                <div style="display:flex;justify-content:center;margin-top:8px;">
+                <div style=${{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
                   <div class="gps-detecting-spinner"></div>
                 </div>
               </div>
@@ -3682,7 +3682,7 @@ Your response style:
               >
                 ${
                   gpsState === 'waiting'  ? i18n.detecting :
-                  gpsState === 'granted'  ? `✅ GPS: ${currentLoc.city}` :
+                  gpsState === 'granted'  ? ('✅ GPS: ' + currentLoc.city) :
                   gpsState === 'denied'   ? '❌ GPS denied — retry?' :
                   i18n.detectLoc
                 }
