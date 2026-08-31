@@ -9,6 +9,24 @@ const LANG_MAP = {
   english: 'en'
 };
 
+// Split long text into <= 160 character sub-chunks for Google TTS API
+function createTextChunks(text) {
+  const words = text.split(/\s+/);
+  const chunks = [];
+  let current = '';
+
+  for (const word of words) {
+    if ((current + ' ' + word).length > 150) {
+      if (current.trim()) chunks.push(current.trim());
+      current = word;
+    } else {
+      current += (current ? ' ' : '') + word;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const text = searchParams.get('text');
@@ -18,31 +36,42 @@ export async function GET(request) {
     return new NextResponse('Missing text parameter', { status: 400 });
   }
 
-  const cleanText = text.trim().slice(0, 500);
+  const cleanText = text.trim().slice(0, 1500);
   const targetLang = LANG_MAP[langKey] || langKey || 'en';
+  const chunks = createTextChunks(cleanText);
 
   try {
-    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${targetLang}&client=tw-ob`;
-    const response = await fetch(ttsUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
+    const audioBuffers = [];
 
-    if (!response.ok) {
-      return new NextResponse('Failed to fetch TTS audio', { status: 502 });
+    for (const chunk of chunks) {
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=${targetLang}&client=tw-ob`;
+      const response = await fetch(ttsUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+
+      if (response.ok) {
+        const buf = await response.arrayBuffer();
+        audioBuffers.push(Buffer.from(buf));
+      }
     }
 
-    const audioBuffer = await response.arrayBuffer();
+    if (audioBuffers.length === 0) {
+      return new NextResponse('Failed to generate audio stream', { status: 502 });
+    }
 
-    return new NextResponse(audioBuffer, {
+    const combinedBuffer = Buffer.concat(audioBuffers);
+
+    return new NextResponse(combinedBuffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
+        'Content-Length': String(combinedBuffer.length),
         'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800'
       }
     });
   } catch (err) {
-    console.error('TTS API error:', err);
+    console.error('Full TTS API error:', err);
     return new NextResponse('Internal TTS Error', { status: 500 });
   }
 }

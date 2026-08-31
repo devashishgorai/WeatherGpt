@@ -1,5 +1,5 @@
-import { LANG_CODES } from './constants';
-import { CONFIG } from './config';
+import { LANG_CODES } from './constants.js';
+import { CONFIG } from './config.js';
 
 /* ===== COMPREHENSIVE TEXT PREPROCESSING FOR NATURAL HUMAN SPEECH ===== */
 export function cleanTextForSpeech(rawText, language = 'english') {
@@ -73,96 +73,47 @@ export function cleanTextForSpeech(rawText, language = 'english') {
   return text.trim();
 }
 
-/* ===== SPLIT TEXT INTO NATURAL SPOKEN SENTENCES ===== */
-export function splitIntoSentences(text) {
-  if (!text) return [];
-  const rawSegments = text.split(/[\n\r।|!?]+|\.\s+/);
-  return rawSegments
-    .map(s => s.replace(/\s+/g, ' ').trim())
-    .filter(s => s.length > 0);
-}
-
-/* ===== HIGH-FIDELITY NATIVE AUDIO STREAM PLAYER ===== */
+/* ===== HIGH-FIDELITY FULL AUDIO STREAM PLAYER ===== */
 export function playNativeIndianSpeech(rawText, language = 'english', onEndCallback) {
   if (typeof window === 'undefined') return null;
 
   const cleanScript = cleanTextForSpeech(rawText, language);
   if (!cleanScript) return null;
 
-  const sentences = splitIntoSentences(cleanScript);
-  if (sentences.length === 0) return null;
+  const audioUrl = `/api/tts?text=${encodeURIComponent(cleanScript)}&lang=${encodeURIComponent(language)}`;
+  const audio = new Audio(audioUrl);
 
-  let currentIndex = 0;
-  let isCancelled = false;
-  let currentAudio = null;
+  audio.onended = () => {
+    if (onEndCallback) onEndCallback();
+  };
 
-  function playNextSentence() {
-    if (isCancelled) return;
-
-    if (currentIndex >= sentences.length) {
+  audio.onerror = (err) => {
+    console.warn('Native audio stream error; falling back to browser SpeechSynthesis:', err);
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(cleanScript);
+      utterance.lang = LANG_CODES[language] || 'en-IN';
+      utterance.onend = () => {
+        if (onEndCallback) onEndCallback();
+      };
+      utterance.onerror = () => {
+        if (onEndCallback) onEndCallback();
+      };
+      window.speechSynthesis.speak(utterance);
+    } else {
       if (onEndCallback) onEndCallback();
-      return;
     }
+  };
 
-    const sentence = sentences[currentIndex];
-    const audioUrl = `/api/tts?text=${encodeURIComponent(sentence)}&lang=${encodeURIComponent(language)}`;
-    const audio = new Audio(audioUrl);
-    currentAudio = audio;
-
-    audio.onended = () => {
-      if (!isCancelled) {
-        currentIndex++;
-        playNextSentence();
-      }
-    };
-
-    audio.onerror = (e) => {
-      console.warn('Native audio stream fallback to browser voice for chunk:', sentence, e);
-      // Fallback to browser SpeechSynthesis for this chunk if audio fails
-      if (!isCancelled) {
-        if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(sentence);
-          utterance.lang = LANG_CODES[language] || 'en-IN';
-          utterance.onend = () => {
-            if (!isCancelled) {
-              currentIndex++;
-              playNextSentence();
-            }
-          };
-          utterance.onerror = () => {
-            if (!isCancelled) {
-              currentIndex++;
-              playNextSentence();
-            }
-          };
-          window.speechSynthesis.speak(utterance);
-        } else {
-          currentIndex++;
-          playNextSentence();
-        }
-      }
-    };
-
-    audio.play().catch(playErr => {
-      console.warn('Audio play error (user interaction or audio blocked):', playErr);
-      if (!isCancelled) {
-        currentIndex++;
-        playNextSentence();
-      }
-    });
-  }
-
-  // Start sequential audio playback
-  playNextSentence();
+  audio.play().catch(playErr => {
+    console.warn('Audio play request failed:', playErr);
+    if (onEndCallback) onEndCallback();
+  });
 
   return {
     cancel: () => {
-      isCancelled = true;
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.src = '';
-        currentAudio = null;
-      }
+      audio.pause();
+      audio.src = '';
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
