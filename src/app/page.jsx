@@ -1,0 +1,460 @@
+'use client';
+
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { UI_I18N } from '@/lib/i18n';
+import { CONFIG } from '@/lib/config';
+import { geocodeAddress } from '@/lib/geocoding';
+import { getBackgroundTintClass, evaluateAlertStatus } from '@/lib/weatherApi';
+import {
+  formatWeatherForPrompt,
+  buildSystemPrompt,
+  executeClaudeRequest,
+  generateSmartLocalResponse
+} from '@/lib/llmService';
+
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { useWeather } from '@/hooks/useWeather';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+
+import Sidebar from '@/components/Sidebar/Sidebar';
+import Header from '@/components/Header/Header';
+import ChatArea from '@/components/Chat/ChatArea';
+import QuickChips from '@/components/Chat/QuickChips';
+import InputBar from '@/components/Chat/InputBar';
+import SevenDayForecast from '@/components/Forecast/SevenDayForecast';
+import HourlyForecast from '@/components/Forecast/HourlyForecast';
+import GpsOverlay from '@/components/Modals/GpsOverlay';
+import CompareModal from '@/components/Modals/CompareModal';
+import SettingsModal from '@/components/Modals/SettingsModal';
+import AlertBanner from '@/components/UI/AlertBanner';
+import Toast from '@/components/UI/Toast';
+import ErrorBoundary from '@/components/UI/ErrorBoundary';
+
+function getCurrentTimestamp() {
+  return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+export default function WeatherGptHome() {
+  // Toast state
+  const [toastMsg, setToastMsg] = useState(null);
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  }, []);
+
+  // Weather Hook
+  const {
+    weather,
+    forecast,
+    weatherAlerts,
+    isFallbackMode,
+    isLoadingWeather,
+    lastUpdatedTime,
+    refreshCountdown,
+    setRefreshCountdown,
+    fetchWeatherData
+  } = useWeather(showToast);
+
+  // Geolocation Hook
+  const {
+    currentLoc,
+    setCurrentLoc,
+    gpsState,
+    setGpsState,
+    isDetectingLoc,
+    runGpsDetect,
+    handleSkipGps
+  } = useGeolocation('New Delhi', 28.6139, 77.2090, (lat, lng, city) => {
+    fetchWeatherData(lat, lng, city);
+  });
+
+  // Search History
+  const [searchInput, setSearchInput] = useState('');
+  const [searchHistory, setSearchHistory] = useState(['New Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru']);
+
+  // Persona & Language
+  const [selectedPersona, setSelectedPersona] = useState('citizen');
+  const [selectedLanguage, setSelectedLanguage] = useState('hindi');
+  const i18n = useMemo(() => UI_I18N[selectedLanguage] || UI_I18N.english, [selectedLanguage]);
+
+  // Chat state
+  const [messages, setMessages] = useState([]);
+  const [textInput, setTextInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [translatedMap, setTranslatedMap] = useState({});
+
+  // Modals & Panels
+  const [showSevenDay, setShowSevenDay] = useState(false);
+  const [showTwentyFourHr, setShowTwentyFourHr] = useState(false);
+  const [alertBannerDismissed, setAlertBannerDismissed] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // TTS Speech Hook
+  const { activeSpeakingId, toggleListen } = useSpeechSynthesis(selectedLanguage);
+
+  // Send message callback
+  const handleSendMessage = useCallback(async (textToSend) => {
+    const query = (textToSend || textInput).trim();
+    if (!query || isSending) return;
+
+    const userMsg = {
+      role: 'user',
+      content: query,
+      time: getCurrentTimestamp(),
+      id: Date.now() + Math.random()
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setTextInput('');
+
+    setIsSending(true);
+    setIsTyping(true);
+
+    await new Promise((r) => setTimeout(r, 250));
+
+    let generatedAnswer = '';
+    const weatherSummary = weather ? formatWeatherForPrompt(weather, forecast) : 'Weather conditions unavailable.';
+    const systemPrompt = buildSystemPrompt(selectedPersona, selectedLanguage, weatherSummary);
+    const historyForClaude = [...messages.slice(-8), userMsg].map((m) => ({ role: m.role, content: m.content }));
+
+    try {
+      if (CONFIG.CLAUDE_API_KEY || CONFIG.GEMINI_API_KEY || CONFIG.OPENAI_API_KEY) {
+        generatedAnswer = await executeClaudeRequest(systemPrompt, historyForClaude);
+      } else {
+        throw new Error('Using smart localized engine.');
+      }
+    } catch (apiErr) {
+      console.info('Using high-fidelity local persona engine:', apiErr.message);
+      generatedAnswer = generateSmartLocalResponse(selectedPersona, selectedLanguage, weather, query, forecast);
+    }
+
+    const aiMsg = {
+      role: 'assistant',
+      content: generatedAnswer,
+      query: query,
+      time: getCurrentTimestamp(),
+      id: Date.now() + Math.random(),
+      source: isFallbackMode ? 'open-meteo' : 'google'
+    };
+
+    setMessages((prev) => [...prev, aiMsg]);
+    setIsTyping(false);
+    setIsSending(false);
+  }, [textInput, isSending, messages, weather, forecast, selectedPersona, selectedLanguage, isFallbackMode]);
+
+  // STT Speech Recognition Hook
+  const { micStatus, toggleMicrophone } = useSpeechRecognition(
+    selectedLanguage,
+    (finalTranscript) => handleSendMessage(finalTranscript),
+    showToast
+  );
+
+  // Active Alert Info
+  const activeAlert = useMemo(
+    () => evaluateAlertStatus(weather, weatherAlerts, forecast, selectedLanguage),
+    [weather, weatherAlerts, forecast, selectedLanguage]
+  );
+
+  // Initial Mount
+  useEffect(() => {
+    if (gpsState === 'unsupported') {
+      fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 10-Minute Auto-Refresh Countdown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRefreshCountdown((prev) => {
+        if (prev <= 1) {
+          fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+          return 600;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [currentLoc, fetchWeatherData, setRefreshCountdown]);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && (e.key === 'm' || e.key === 'M')) {
+        e.preventDefault();
+        toggleMicrophone(setTextInput);
+      }
+      if (e.key === 'Escape') {
+        if (isCompareOpen) setIsCompareOpen(false);
+        else if (isSettingsOpen) setIsSettingsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCompareOpen, isSettingsOpen, toggleMicrophone]);
+
+  // Location Search Handler
+  const handleExecuteSearch = async (targetCity) => {
+    if (!targetCity || !targetCity.trim()) return;
+    const clean = targetCity.trim();
+    const geo = await geocodeAddress(clean);
+
+    if (geo) {
+      setCurrentLoc({
+        city: geo.city,
+        lat: geo.lat,
+        lng: geo.lng,
+        isGps: false,
+        detail: geo.formattedAddress?.split(',')[1]?.trim() || ''
+      });
+      setSearchInput('');
+      setSearchHistory((prev) => {
+        const filtered = prev.filter((c) => c.toLowerCase() !== geo.city.toLowerCase());
+        return [geo.city, ...filtered].slice(0, 5);
+      });
+      fetchWeatherData(geo.lat, geo.lng, geo.city);
+      setMobileSidebarOpen(false);
+    } else {
+      showToast(`❌ Could not locate "${clean}". Please verify spelling.`);
+    }
+  };
+
+  // Translation handler
+  const handleToggleTranslate = async (msg) => {
+    if (!msg || !msg.id) return;
+
+    if (translatedMap[msg.id]) {
+      setTranslatedMap((prev) => {
+        const next = { ...prev };
+        delete next[msg.id];
+        return next;
+      });
+      return;
+    }
+
+    if (CONFIG.CLAUDE_API_KEY || CONFIG.GEMINI_API_KEY || CONFIG.OPENAI_API_KEY) {
+      try {
+        const trans = await executeClaudeRequest(
+          'Translate the following Indian regional weather message to clear English. Output only the translation, no extra commentary.',
+          [{ role: 'user', content: msg.content }]
+        );
+        if (trans && trans.trim()) {
+          setTranslatedMap((prev) => ({ ...prev, [msg.id]: trans.trim() }));
+          return;
+        }
+      } catch (err) {
+        console.info('LLM translation not available, using local engine:', err.message);
+      }
+    }
+
+    try {
+      const userQuery = msg.query || '';
+      const engText = generateSmartLocalResponse(selectedPersona, 'english', weather, userQuery || msg.content, forecast);
+      setTranslatedMap((prev) => ({ ...prev, [msg.id]: engText }));
+    } catch (e) {
+      console.warn('Translation engine error:', e);
+      const w = weather || {};
+      const isRainy = (w.condition || '').toLowerCase().includes('rain') || (w.humidity || 0) > 75;
+      const basicSummary = `Weather for ${w.city || 'your area'}: ${w.temp || 28}°C, ${w.condition || 'Clear'}.\n` +
+        `Humidity: ${w.humidity || 55}% | Wind: ${w.windSpeed || 12} km/h | UV: ${w.uvIndex || 5}\n\n` +
+        (isRainy ? '🌧️ Rain is expected — carry an umbrella!' : '😊 Pleasant weather conditions for outdoor activities.');
+      setTranslatedMap((prev) => ({ ...prev, [msg.id]: basicSummary }));
+    }
+  };
+
+  const handleCopyText = (msg) => {
+    navigator.clipboard.writeText(msg.content)
+      .then(() => showToast('📋 Copied to clipboard!'))
+      .catch(() => showToast('Failed to copy.'));
+  };
+
+  const handleShareWeather = (msg) => {
+    const sharePayload = `WeatherGPT (${currentLoc.city}):\n${msg.content}\n\n[Powered by WeatherGPT • Smart India Hackathon 2026]`;
+    navigator.clipboard.writeText(sharePayload)
+      .then(() => showToast('📤 Weather report copied for sharing!'))
+      .catch(() => showToast('Failed to copy share text.'));
+  };
+
+  const handleClearConversation = () => {
+    setMessages([]);
+    setTranslatedMap({});
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    showToast('🗑️ Conversation history cleared.');
+  };
+
+  const backgroundTint = weather ? getBackgroundTintClass(weather.condition, weather.isDaytime) : 'clear';
+
+  return (
+    <ErrorBoundary>
+      <div className="app-wrapper">
+        {/* GPS Permission / Signal Acquisition Overlay */}
+        <GpsOverlay
+          gpsState={gpsState}
+          onAllowGps={() => runGpsDetect(showToast)}
+          onSkipGps={handleSkipGps}
+        />
+
+        {/* Mobile Hamburger Toggle */}
+        <button
+          className="mobile-nav-toggle"
+          id="mobile-nav-toggle"
+          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          title="Toggle Menu"
+        >
+          {mobileSidebarOpen ? '✕' : '☰'}
+        </button>
+
+        {/* Mobile Backdrop Overlay */}
+        <div
+          className={`mobile-backdrop-overlay ${mobileSidebarOpen ? 'active' : ''}`}
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+
+        {/* Sidebar */}
+        <Sidebar
+          mobileSidebarOpen={mobileSidebarOpen}
+          setMobileSidebarOpen={setMobileSidebarOpen}
+          searchInput={searchInput}
+          setSearchInput={setSearchInput}
+          onSearch={handleExecuteSearch}
+          searchHistory={searchHistory}
+          currentLoc={currentLoc}
+          gpsState={gpsState}
+          isDetectingLoc={isDetectingLoc}
+          onDetectLocation={() => runGpsDetect(showToast)}
+          selectedPersona={selectedPersona}
+          setSelectedPersona={setSelectedPersona}
+          selectedLanguage={selectedLanguage}
+          setSelectedLanguage={setSelectedLanguage}
+          i18n={i18n}
+          weather={weather}
+          forecast={forecast}
+          isLoadingWeather={isLoadingWeather}
+          lastUpdatedTime={lastUpdatedTime}
+          refreshCountdown={refreshCountdown}
+          onRefreshWeather={() => fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city)}
+        />
+
+        {/* Main Viewport */}
+        <main className="main-viewport" id="main-viewport">
+          {/* Top Alert Banner */}
+          <AlertBanner
+            activeAlert={activeAlert}
+            isDismissed={alertBannerDismissed}
+            onDismiss={() => setAlertBannerDismissed(true)}
+          />
+
+          {/* Header */}
+          <Header
+            currentLoc={currentLoc}
+            weather={weather}
+            i18n={i18n}
+            isCompareOpen={isCompareOpen}
+            onOpenCompare={() => setIsCompareOpen(true)}
+            onClearChat={handleClearConversation}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+
+          {/* Chat Messages */}
+          <ChatArea
+            messages={messages}
+            backgroundTint={backgroundTint}
+            isTyping={isTyping}
+            currentLoc={currentLoc}
+            i18n={i18n}
+            activeSpeakingId={activeSpeakingId}
+            translatedMap={translatedMap}
+            onSelectStarter={(personaKey, q) => {
+              setSelectedPersona(personaKey);
+              handleSendMessage(q);
+            }}
+            onToggleListen={toggleListen}
+            onCopyText={handleCopyText}
+            onShareWeather={handleShareWeather}
+            onToggleTranslate={handleToggleTranslate}
+          />
+
+          {/* Forecast Panel Toggles */}
+          <div className="forecast-toggles-bar">
+            <button
+              id="toggle-7day-btn"
+              className={`toggle-forecast-btn ${showSevenDay ? 'active' : ''}`}
+              onClick={() => {
+                setShowSevenDay(!showSevenDay);
+                if (!showSevenDay) setShowTwentyFourHr(false);
+              }}
+            >
+              <span>📅</span> {i18n.forecast7}
+            </button>
+            <button
+              id="toggle-24hr-btn"
+              className={`toggle-forecast-btn ${showTwentyFourHr ? 'active' : ''}`}
+              onClick={() => {
+                setShowTwentyFourHr(!showTwentyFourHr);
+                if (!showTwentyFourHr) setShowSevenDay(false);
+              }}
+            >
+              <span>🕐</span> {i18n.forecast24}
+            </button>
+          </div>
+
+          {/* Forecast Sliders */}
+          {showSevenDay && (
+            <SevenDayForecast
+              forecast={forecast}
+              selectedLanguage={selectedLanguage}
+              i18n={i18n}
+            />
+          )}
+
+          {showTwentyFourHr && (
+            <HourlyForecast forecast={forecast} />
+          )}
+
+          {/* Quick Question Chips */}
+          <QuickChips
+            selectedPersona={selectedPersona}
+            i18n={i18n}
+            onChipClick={(chip) => handleSendMessage(chip)}
+          />
+
+          {/* Input Bar */}
+          <InputBar
+            textInput={textInput}
+            setTextInput={setTextInput}
+            onSendMessage={handleSendMessage}
+            isSending={isSending}
+            micStatus={micStatus}
+            onToggleMicrophone={() => toggleMicrophone(setTextInput)}
+            i18n={i18n}
+          />
+        </main>
+
+        {/* Compare Cities Modal */}
+        <CompareModal
+          isOpen={isCompareOpen}
+          onClose={() => setIsCompareOpen(false)}
+          currentLoc={currentLoc}
+          weather={weather}
+          i18n={i18n}
+          showToast={showToast}
+        />
+
+        {/* Settings Modal */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          showToast={showToast}
+        />
+
+        {/* Floating Toast */}
+        <Toast message={toastMsg} />
+      </div>
+    </ErrorBoundary>
+  );
+}
