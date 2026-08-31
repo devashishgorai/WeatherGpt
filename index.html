@@ -262,25 +262,72 @@
       font-size: 12px;
       color: rgba(255, 255, 255, 0.95);
       display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 0;
-      font-weight: 500;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      margin-top: 4px;
     }
 
     .current-location-tag .pulse-dot {
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       background: #4CAF50;
       border-radius: 50%;
       box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
       animation: pulseGreen 1.8s infinite;
+      margin-top: 4px;
+      flex-shrink: 0;
     }
 
-    @keyframes pulseGreen {
-      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
-      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    .current-location-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .current-location-name {
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    .current-location-coords {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 3px;
+      line-height: 1.3;
+    }
+
+    .gps-active-badge {
+      font-size: 9px;
+      font-weight: 800;
+      background: #4CAF50;
+      color: #FFFFFF;
+      padding: 1px 5px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .header-gps-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      background: #E8F5E9;
+      color: #1B5E20;
+      border: 1px solid #A5D6A7;
     }
 
     .search-history-chips {
@@ -2688,21 +2735,139 @@ Your response style:
       return null;
     }
 
-    // Reverse Geocoding
+    // Distance helper for nearest city fallback
+    function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function findClosestIndianCity(lat, lng) {
+      let closestCity = null;
+      let minDistance = Infinity;
+      for (const [key, item] of Object.entries(INDIAN_CITIES_DB)) {
+        const dist = calculateDistanceKm(lat, lng, item.lat, item.lng);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestCity = item.city;
+        }
+      }
+      return { city: closestCity || 'India', distance: Math.round(minDistance) };
+    }
+
+    // Robust Multi-Tier Reverse Geocoding Engine
     async function reverseGeocodeCoords(lat, lng) {
+      // Tier 1: BigDataCloud Client Reverse Geocode API (High accuracy for Indian localities/cities)
       try {
-        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${CONFIG.GOOGLE_API_KEY}`;
+        const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
         const res = await fetch(url);
-        const data = await res.json();
-        if (data.status === 'OK' && data.results && data.results.length > 0) {
-          const first = data.results[0];
-          const locality = first.address_components?.find(c => c.types.includes('locality'))?.long_name;
-          return locality || first.formatted_address?.split(',')[0] || 'Your Location';
+        if (res.ok) {
+          const data = await res.json();
+          const locality = (data.locality || '').trim();
+          const city = (data.city || '').trim();
+          const state = (data.principalSubdivision || '').trim();
+          
+          let name = '';
+          if (locality && city && locality.toLowerCase() !== city.toLowerCase()) {
+            name = `${locality}, ${city}`;
+          } else if (locality) {
+            name = locality;
+          } else if (city) {
+            name = city;
+          } else if (state) {
+            name = state;
+          }
+
+          if (name) {
+            return {
+              city: name,
+              subdivision: state,
+              country: data.countryName || 'India',
+              formatted: name + (state && !name.includes(state) ? `, ${state}` : '')
+            };
+          }
         }
       } catch (err) {
-        console.warn('Reverse geocode error:', err);
+        console.warn('BigDataCloud reverse geocode error:', err);
       }
-      return 'Your Location';
+
+      // Tier 2: OpenStreetMap Nominatim (Detailed suburb/neighbourhood/town)
+      try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'WeatherGPT/1.0' } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.address) {
+            const a = data.address;
+            const sub = a.suburb || a.neighbourhood || a.village || a.hamlet || '';
+            const city = a.city || a.town || a.municipality || a.county || a.state_district || '';
+            const state = a.state || '';
+            
+            let name = '';
+            if (sub && city && sub.toLowerCase() !== city.toLowerCase()) {
+              name = `${sub}, ${city}`;
+            } else {
+              name = sub || city || state || a.country || '';
+            }
+
+            if (name) {
+              return {
+                city: name,
+                subdivision: state,
+                country: a.country || 'India',
+                formatted: name + (state && !name.includes(state) ? `, ${state}` : '')
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Nominatim reverse geocode error:', err);
+      }
+
+      // Tier 3: Google Maps Geocoding API (if key available)
+      try {
+        if (CONFIG.GOOGLE_API_KEY) {
+          const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${CONFIG.GOOGLE_API_KEY}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.status === 'OK' && data.results && data.results.length > 0) {
+            const first = data.results[0];
+            const locality = first.address_components?.find(c => c.types.includes('locality'))?.long_name;
+            const sublocality = first.address_components?.find(c => c.types.includes('sublocality'))?.long_name;
+            const admin = first.address_components?.find(c => c.types.includes('administrative_area_level_1'))?.long_name;
+            
+            const cityName = (sublocality && locality && sublocality.toLowerCase() !== locality.toLowerCase())
+              ? `${sublocality}, ${locality}`
+              : (locality || sublocality || first.formatted_address?.split(',')[0]);
+
+            if (cityName) {
+              return {
+                city: cityName,
+                subdivision: admin || '',
+                country: 'India',
+                formatted: first.formatted_address || cityName
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Google reverse geocode error:', err);
+      }
+
+      // Tier 4: Offline proximity match with nearest Indian city
+      const nearest = findClosestIndianCity(lat, lng);
+      const coordStr = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E`;
+      return {
+        city: nearest.distance < 40 ? nearest.city : `Near ${nearest.city} (${coordStr})`,
+        subdivision: '',
+        country: 'India',
+        formatted: `${nearest.city} area (${coordStr})`
+      };
     }
 
     // 2. Google Weather APIs
@@ -3045,7 +3210,7 @@ Your response style:
        ========================================================================= */
     function WeatherGptApp() {
       // Location & Search State
-      const [currentLoc, setCurrentLoc] = useState({ city: 'New Delhi', lat: 28.6139, lng: 77.2090 });
+      const [currentLoc, setCurrentLoc] = useState({ city: 'New Delhi', lat: 28.6139, lng: 77.2090, isGps: false, detail: 'National Capital Territory' });
       const [searchInput, setSearchInput] = useState('');
       const [searchHistory, setSearchHistory] = useState(['New Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru']);
       const [isDetectingLoc, setIsDetectingLoc] = useState(false);
@@ -3180,8 +3345,16 @@ Your response style:
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
             const { latitude, longitude } = pos.coords;
-            const cityName = await reverseGeocodeCoords(latitude, longitude);
-            setCurrentLoc({ city: cityName, lat: latitude, lng: longitude });
+            const geoInfo = await reverseGeocodeCoords(latitude, longitude);
+            const cityName = typeof geoInfo === 'string' ? geoInfo : (geoInfo?.city || 'Your Location');
+            const stateOrDesc = geoInfo?.subdivision || '';
+            setCurrentLoc({
+              city: cityName,
+              lat: latitude,
+              lng: longitude,
+              isGps: true,
+              detail: stateOrDesc
+            });
             setSearchHistory(prev => {
               const filtered = prev.filter(c => c.toLowerCase() !== cityName.toLowerCase());
               return [cityName, ...filtered].slice(0, 5);
@@ -3189,7 +3362,7 @@ Your response style:
             await fetchWeatherData(latitude, longitude, cityName);
             setGpsState('granted');
             setIsDetectingLoc(false);
-            showToast(`📍 Location detected: ${cityName}`);
+            showToast(`📍 GPS Detected: ${cityName}${stateOrDesc ? ' (' + stateOrDesc + ')' : ''}`);
           },
           (err) => {
             console.warn('GPS auto-detect failed:', err);
@@ -3269,7 +3442,13 @@ Your response style:
         const geo = await geocodeAddress(clean);
 
         if (geo) {
-          setCurrentLoc({ city: geo.city, lat: geo.lat, lng: geo.lng });
+          setCurrentLoc({
+            city: geo.city,
+            lat: geo.lat,
+            lng: geo.lng,
+            isGps: false,
+            detail: geo.formattedAddress?.split(',')[1]?.trim() || ''
+          });
           setSearchInput('');
           setSearchHistory(prev => {
             const filtered = prev.filter(c => c.toLowerCase() !== geo.city.toLowerCase());
@@ -3298,8 +3477,16 @@ Your response style:
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
             const { latitude, longitude } = pos.coords;
-            const cityName = await reverseGeocodeCoords(latitude, longitude);
-            setCurrentLoc({ city: cityName, lat: latitude, lng: longitude });
+            const geoInfo = await reverseGeocodeCoords(latitude, longitude);
+            const cityName = typeof geoInfo === 'string' ? geoInfo : (geoInfo?.city || 'Your Location');
+            const stateOrDesc = geoInfo?.subdivision || '';
+            setCurrentLoc({
+              city: cityName,
+              lat: latitude,
+              lng: longitude,
+              isGps: true,
+              detail: stateOrDesc
+            });
             setSearchHistory(prev => {
               const filtered = prev.filter(c => c.toLowerCase() !== cityName.toLowerCase());
               return [cityName, ...filtered].slice(0, 5);
@@ -3308,7 +3495,7 @@ Your response style:
             setGpsState('granted');
             setIsDetectingLoc(false);
             setMobileSidebarOpen(false);
-            showToast(`📍 Location updated: ${cityName}`);
+            showToast(`📍 Location updated: ${cityName}${stateOrDesc ? ' (' + stateOrDesc + ')' : ''}`);
           },
           (err) => {
             console.warn('Geolocation denied/error:', err);
@@ -3689,7 +3876,18 @@ Your response style:
               </button>
               <div class="current-location-tag">
                 <span class="pulse-dot"></span>
-                <span>${currentLoc.city}</span>
+                <div class="current-location-info">
+                  <div class="current-location-name">
+                    <span>${currentLoc.city}</span>
+                    ${currentLoc.isGps && html`<span class="gps-active-badge">GPS</span>`}
+                  </div>
+                  ${currentLoc.lat && currentLoc.lng && html`
+                    <div class="current-location-coords">
+                      <span>${currentLoc.lat.toFixed(2)}°N, ${currentLoc.lng.toFixed(2)}°E</span>
+                      ${currentLoc.detail && html`<span> · ${currentLoc.detail}</span>`}
+                    </div>
+                  `}
+                </div>
               </div>
               ${searchHistory.length > 0 && html`
                 <div class="search-history-chips">
@@ -3822,6 +4020,7 @@ Your response style:
                 <h1 class="header-city-title">
                   <span>${weather ? getWeatherEmoji(weather.condition) : '📍'}</span>
                   <span>${currentLoc.city}</span>
+                  ${currentLoc.isGps && html`<span class="header-gps-pill">📍 Live GPS</span>`}
                   ${weather && html`<span class="header-condition-pill">· ${weather.condition}</span>`}
                 </h1>
               </div>
