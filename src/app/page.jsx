@@ -122,13 +122,15 @@ export default function WeatherGptHome() {
     const historyForClaude = [...messages.slice(-8), userMsg].map((m) => ({ role: m.role, content: m.content }));
 
     try {
-      if (CONFIG.CLAUDE_API_KEY || CONFIG.GEMINI_API_KEY || CONFIG.OPENAI_API_KEY) {
-        generatedAnswer = await executeClaudeRequest(systemPrompt, historyForClaude);
-      } else {
-        throw new Error('Using smart localized engine.');
-      }
+      generatedAnswer = await executeClaudeRequest(systemPrompt, historyForClaude, {
+        persona: selectedPersona,
+        language: selectedLanguage,
+        weather,
+        userQuery: query,
+        forecast
+      });
     } catch (apiErr) {
-      console.info('Using high-fidelity local persona engine:', apiErr.message);
+      console.info('Using local meteorological reasoning engine:', apiErr.message);
       generatedAnswer = generateSmartLocalResponse(selectedPersona, selectedLanguage, weather, query, forecast);
     }
 
