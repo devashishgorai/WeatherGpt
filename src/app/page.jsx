@@ -65,7 +65,7 @@ export default function WeatherGptHome() {
     isDetectingLoc,
     runGpsDetect,
     handleSkipGps
-  } = useGeolocation('New Delhi', 28.6139, 77.2090, (lat, lng, city) => {
+  } = useGeolocation('', null, null, (lat, lng, city) => {
     fetchWeatherData(lat, lng, city);
   });
 
@@ -97,9 +97,11 @@ export default function WeatherGptHome() {
   const { activeSpeakingId, toggleListen } = useSpeechSynthesis(selectedLanguage);
 
   // Send message callback
-  const handleSendMessage = useCallback(async (textToSend) => {
+  const handleSendMessage = useCallback(async (textToSend, personaOverride) => {
     const query = (textToSend || textInput).trim();
     if (!query || isSending) return;
+
+    const resolvedPersona = personaOverride || selectedPersona || 'citizen';
 
     const userMsg = {
       role: 'user',
@@ -118,12 +120,12 @@ export default function WeatherGptHome() {
 
     let generatedAnswer = '';
     const weatherSummary = weather ? formatWeatherForPrompt(weather, forecast) : 'Weather conditions unavailable.';
-    const systemPrompt = buildSystemPrompt(selectedPersona, selectedLanguage, weatherSummary);
+    const systemPrompt = buildSystemPrompt(resolvedPersona, selectedLanguage, weatherSummary);
     const historyForClaude = [...messages.slice(-8), userMsg].map((m) => ({ role: m.role, content: m.content }));
 
     try {
       generatedAnswer = await executeClaudeRequest(systemPrompt, historyForClaude, {
-        persona: selectedPersona,
+        persona: resolvedPersona,
         language: selectedLanguage,
         weather,
         userQuery: query,
@@ -131,7 +133,7 @@ export default function WeatherGptHome() {
       });
     } catch (apiErr) {
       console.info('Using local meteorological reasoning engine:', apiErr.message);
-      generatedAnswer = generateSmartLocalResponse(selectedPersona, selectedLanguage, weather, query, forecast);
+      generatedAnswer = generateSmartLocalResponse(resolvedPersona, selectedLanguage, weather, query, forecast);
     }
 
     const aiMsg = {
@@ -163,8 +165,8 @@ export default function WeatherGptHome() {
 
   // Initial Mount
   useEffect(() => {
-    if (gpsState === 'unsupported') {
-      fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+    if (gpsState === 'unsupported' && currentLoc.latitude != null && currentLoc.longitude != null) {
+      fetchWeatherData(currentLoc.latitude, currentLoc.longitude, currentLoc.city);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -173,7 +175,9 @@ export default function WeatherGptHome() {
     const timer = setInterval(() => {
       setRefreshCountdown((prev) => {
         if (prev <= 1) {
-          fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city);
+          if (currentLoc.latitude != null && currentLoc.longitude != null) {
+            fetchWeatherData(currentLoc.latitude, currentLoc.longitude, currentLoc.city);
+          }
           return 600;
         }
         return prev - 1;
@@ -206,11 +210,18 @@ export default function WeatherGptHome() {
 
     if (geo) {
       setCurrentLoc({
+        latitude: geo.lat,
+        longitude: geo.lng,
+        accuracy: null,
+        address: geo.formattedAddress || geo.city,
+        displayPrimary: geo.city,
+        displaySecondary: [geo.state, geo.country].filter(Boolean).join(' · '),
         city: geo.city,
-        lat: geo.lat,
-        lng: geo.lng,
+        state: geo.state || '',
+        country: geo.country || '',
+        source: 'search',
         isGps: false,
-        detail: geo.formattedAddress?.split(',')[1]?.trim() || ''
+        detail: geo.state || geo.formattedAddress?.split(',')[1]?.trim() || ''
       });
       setSearchInput('');
       setSearchHistory((prev) => {
@@ -339,7 +350,7 @@ export default function WeatherGptHome() {
           isLoadingWeather={isLoadingWeather}
           lastUpdatedTime={lastUpdatedTime}
           refreshCountdown={refreshCountdown}
-          onRefreshWeather={() => fetchWeatherData(currentLoc.lat, currentLoc.lng, currentLoc.city)}
+          onRefreshWeather={() => currentLoc.latitude != null && fetchWeatherData(currentLoc.latitude, currentLoc.longitude, currentLoc.city)}
         />
 
         {/* Main Viewport */}
@@ -347,6 +358,7 @@ export default function WeatherGptHome() {
           {/* Top Alert Banner */}
           <AlertBanner
             activeAlert={activeAlert}
+            currentLoc={currentLoc}
             isDismissed={alertBannerDismissed}
             onDismiss={() => setAlertBannerDismissed(true)}
           />
@@ -367,12 +379,13 @@ export default function WeatherGptHome() {
             backgroundTint={backgroundTint}
             isTyping={isTyping}
             currentLoc={currentLoc}
+            selectedPersona={selectedPersona}
             i18n={i18n}
             activeSpeakingId={activeSpeakingId}
             translatedMap={translatedMap}
             onSelectStarter={(personaKey, q) => {
               setSelectedPersona(personaKey);
-              handleSendMessage(q);
+              handleSendMessage(q, personaKey);
             }}
             onToggleListen={toggleListen}
             onCopyText={handleCopyText}

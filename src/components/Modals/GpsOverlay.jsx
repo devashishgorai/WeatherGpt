@@ -23,7 +23,7 @@ export default function GpsOverlay({ gpsState, onAllowGps, onSkipGps }) {
             className="gps-deny-btn"
             onClick={onSkipGps}
           >
-            Not now — use New Delhi
+            Not now — search manually
           </button>
           <p className="gps-privacy-note">
             🔒 Your location is used only for weather data and is never stored or shared.

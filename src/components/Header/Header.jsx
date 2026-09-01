@@ -16,7 +16,7 @@ export default function Header({
       <div className="header-left-info">
         <h1 className="header-city-title">
           <span>{weather ? getWeatherEmoji(weather.condition) : '📍'}</span>
-          <span>{currentLoc.city}</span>
+          <span>{currentLoc.displayPrimary || currentLoc.city}</span>
           {currentLoc.isGps && <span className="header-gps-pill">📍 Live GPS</span>}
           {weather && <span className="header-condition-pill">· {weather.condition}</span>}
         </h1>

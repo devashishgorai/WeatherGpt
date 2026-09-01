@@ -12,7 +12,8 @@ import {
   normalizeGoogleDaily,
   normalizeOpenMeteoWeather,
   normalizeOpenMeteoHourly,
-  normalizeOpenMeteoDaily
+  normalizeOpenMeteoDaily,
+  logWeatherCoordinates
 } from '@/lib/weatherApi';
 
 export function useWeather(showToast) {
@@ -25,6 +26,7 @@ export function useWeather(showToast) {
   const [refreshCountdown, setRefreshCountdown] = useState(600); // 10 mins
 
   const fetchWeatherData = useCallback(async (lat, lng, cityName) => {
+    logWeatherCoordinates(lat, lng);
     setIsLoadingWeather(true);
     setIsFallbackMode(false);
 

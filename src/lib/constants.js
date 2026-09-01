@@ -67,10 +67,82 @@ export const LANG_OPTIONS = {
 };
 
 export const PERSONA_CONFIG = {
-  farmer: { emoji: '🌾', key: 'farmer' },
-  fisherman: { emoji: '🎣', key: 'fisherman' },
-  disaster: { emoji: '🚨', key: 'disaster' },
-  citizen: { emoji: '👤', key: 'citizen' }
+  farmer: {
+    key: 'farmer',
+    emoji: '🌾',
+    label: 'Farmer',
+    focus: 'crop health, irrigation timing, soil moisture, spray windows, drainage, and rain-safe field operations',
+    relevantWeatherMetrics: ['rainChance', 'humidity', 'windSpeed', 'temperature'],
+    suggestedQuestions: [
+      '🌧️ Will it rain today?',
+      '💧 Is irrigation safe right now?',
+      '🌡️ Is heat stressing the crops?',
+      '📅 What is the best time to harvest?'
+    ],
+    starterCards: [
+      { personaKey: 'farmer', title: 'Farmer', emoji: '🌾', q: 'Should I irrigate the field today?', a: 'Check rainfall timing and soil moisture before watering.' },
+      { personaKey: 'farmer', title: 'Farmer', emoji: '🌾', q: 'Will crops face stress this week?', a: 'High heat or heavy rain can both affect crop health.' },
+      { personaKey: 'farmer', title: 'Farmer', emoji: '🌾', q: 'Is spraying safe in this weather?', a: 'Wind and rain can reduce spray effectiveness and safety.' }
+    ],
+    responseInstructions: 'Guide the user around irrigation decisions, crop stress, rain timing, soil moisture, spray safety, drainage, and the best field operation window.'
+  },
+  fisherman: {
+    key: 'fisherman',
+    emoji: '🎣',
+    label: 'Fisherman',
+    focus: 'wind, sea safety, storm risk, wave height, fishing windows, and coastal advisories',
+    relevantWeatherMetrics: ['windSpeed', 'rainChance', 'stormRisk', 'visibility'],
+    suggestedQuestions: [
+      '⛵ Is it safe to go to sea today?',
+      '🌊 What are the wave conditions?',
+      '🌀 Is there a storm warning?',
+      '💨 What is the wind speed at the coast?'
+    ],
+    starterCards: [
+      { personaKey: 'fisherman', title: 'Fisherman', emoji: '🎣', q: 'Is it safe to fish today?', a: 'Wave height and wind speeds matter more than temperature for coastal safety.' },
+      { personaKey: 'fisherman', title: 'Fisherman', emoji: '🎣', q: 'What is the sea condition this morning?', a: 'Early morning often has calmer windows before the wind rises.' },
+      { personaKey: 'fisherman', title: 'Fisherman', emoji: '🎣', q: 'Should I avoid the coast due to wind?', a: 'Strong wind or storms can make venturing out unsafe.' }
+    ],
+    responseInstructions: 'Focus on wind strength, marine safety, storm risk, wave conditions, fishing windows, and the safest time to head out or stay ashore.'
+  },
+  disaster: {
+    key: 'disaster',
+    emoji: '🚨',
+    label: 'Disaster Manager',
+    focus: 'flood risk, heavy rain, severe wind, heatwave risk, emergency readiness, and safe-zone decisions',
+    relevantWeatherMetrics: ['rainChance', 'severity', 'windSpeed', 'humidity', 'alertLevel'],
+    suggestedQuestions: [
+      '🚨 Are there active warnings?',
+      '🌊 Is there flood risk?',
+      '🌡️ How severe is the heatwave risk?',
+      '🌧️ How much rain has fallen in 24 hours?'
+    ],
+    starterCards: [
+      { personaKey: 'disaster', title: 'Disaster Manager', emoji: '🚨', q: 'What is the flood risk today?', a: 'Check rainfall intensity, drainage, and low-lying area exposure.' },
+      { personaKey: 'disaster', title: 'Disaster Manager', emoji: '🚨', q: 'Which areas are most at risk?', a: 'Low-lying zones and riverside pockets need priority monitoring.' },
+      { personaKey: 'disaster', title: 'Disaster Manager', emoji: '🚨', q: 'Should preparedness plans be escalated?', a: 'Heavy rain, strong wind, and flooded roads can trigger action.' }
+    ],
+    responseInstructions: 'Prioritize risk severity, flood vulnerability, emergency readiness, wind damage potential, and precise recommendations for protective action or escalation.'
+  },
+  citizen: {
+    key: 'citizen',
+    emoji: '👤',
+    label: 'Citizen',
+    focus: 'comfort, umbrella need, commute, travel, outdoor activity, and daily planning',
+    relevantWeatherMetrics: ['temperature', 'rainChance', 'humidity', 'windSpeed'],
+    suggestedQuestions: [
+      '☀️ How is the weather today?',
+      '☂️ Do I need an umbrella?',
+      '🏃 Is it good for going outside?',
+      '📅 What is the weather this weekend?'
+    ],
+    starterCards: [
+      { personaKey: 'citizen', title: 'Citizen', emoji: '👤', q: 'What is the weather like today?', a: 'A quick comfort check for travel, errands, and outdoor plans.' },
+      { personaKey: 'citizen', title: 'Citizen', emoji: '👤', q: 'Should I carry an umbrella?', a: 'Rain probability and humidity are the key signals.' },
+      { personaKey: 'citizen', title: 'Citizen', emoji: '👤', q: 'Is it good to go out this evening?', a: 'Comfort depends on temperature, rain, and wind.' }
+    ],
+    responseInstructions: 'Answer with practical comfort guidance, umbrella planning, commute readiness, travel suitability, and outdoor activity advice in a friendly manner.'
+  }
 };
 
 export const WMO_WEATHER_TABLE = {

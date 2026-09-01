@@ -1,5 +1,20 @@
 import { CONFIG } from './config.js';
+import { PERSONA_CONFIG } from './constants.js';
 import { getWeatherEmoji } from './weatherApi.js';
+
+function normalizePersona(persona) {
+  return PERSONA_CONFIG[persona] ? persona : 'citizen';
+}
+
+function getPersonaPromptLine(persona) {
+  const role = PERSONA_CONFIG[normalizePersona(persona)] || PERSONA_CONFIG.citizen;
+  return `
+PERSONA CONTEXT:
+- Role: ${role.label}
+- Core focus: ${role.focus}
+- Response lens: ${role.responseInstructions}
+- Relevant weather signals: ${role.relevantWeatherMetrics.join(', ')}`;
+}
 
 /* ===== FORMAT WEATHER STATE FOR LLM SYSTEM CONTEXT ===== */
 export function formatWeatherForPrompt(weather, forecast) {
@@ -35,11 +50,16 @@ ${next7Days || 'Unavailable'}
 
 /* ===== BUILD SYSTEM PROMPT FOR GENERATIVE AI ===== */
 export function buildSystemPrompt(persona, language, weatherSummary) {
+  const normalizedPersona = normalizePersona(persona);
+  const role = PERSONA_CONFIG[normalizedPersona] || PERSONA_CONFIG.citizen;
+
   return `You are WeatherGPT, an expert AI meteorological assistant for India with deep localized reasoning.
 
 USER PROFILE:
-- Selected Role: ${persona.toUpperCase()} (Farmer, Fisherman, Disaster Manager, or Citizen)
+- Selected Role: ${role.label.toUpperCase()} (${role.key})
 - Language: ${language.toUpperCase()} (Respond directly in the native script: Bengali, Hindi, Tamil, Telugu, Marathi, or clear English).
+
+${getPersonaPromptLine(normalizedPersona)}
 
 LIVE METEOROLOGICAL CONTEXT:
 ${weatherSummary}
@@ -114,6 +134,9 @@ export function generateSmartLocalResponse(persona, language, weather, userQuery
   );
 
   const q = (userQuery || '').toLowerCase().trim();
+  const resolvedPersona = normalizePersona(persona);
+  const roleConfig = PERSONA_CONFIG[resolvedPersona] || PERSONA_CONFIG.citizen;
+  const personaGuidance = roleConfig.responseInstructions || roleConfig.focus;
 
   /* ===== TEMPORAL PARSING (CRITICAL: Checked FIRST before topic) ===== */
   const isTomorrowQuery = (
@@ -149,7 +172,7 @@ export function generateSmartLocalResponse(persona, language, weather, userQuery
   );
 
   const isFarmingQuery = (
-    persona === 'farmer' || q.includes('sinchai') || q.includes('sech') || 
+    resolvedPersona === 'farmer' || q.includes('sinchai') || q.includes('sech') || 
     q.includes('irrigation') || q.includes('fasal') || q.includes('crop') || 
     q.includes('khet') || q.includes('chash') || q.includes('dhan') || 
     q.includes('alu') || q.includes('sar') || q.includes('fertilizer') || 
@@ -157,11 +180,31 @@ export function generateSmartLocalResponse(persona, language, weather, userQuery
   );
 
   const isFishingQuery = (
-    persona === 'fisherman' || q.includes('fish') || q.includes('mach') || 
+    resolvedPersona === 'fisherman' || q.includes('fish') || q.includes('mach') || 
     q.includes('machli') || q.includes('sea') || q.includes('samundar') || 
     q.includes('somudro') || q.includes('boat') || q.includes('noka') || 
     q.includes('trawler') || q.includes('wave') || q.includes('dheu')
   );
+
+  if (resolvedPersona === 'farmer' && (isRainQuery || isFarmingQuery)) {
+    return isRainyToday
+      ? `🌾 **Farmer advisory for ${w.city}:**\n\nSoil moisture is high (${w.humidity}%) and rain is likely. Hold off on extra irrigation, clear drainage channels, and avoid spraying during active wet conditions. ${personaGuidance}`
+      : `🌾 **Farmer advisory for ${w.city}:**\n\nConditions are dry and suitable for fieldwork. Schedule irrigation or crop checks during the cooler parts of the day and keep an eye on moisture levels.`;
+  }
+
+  if (resolvedPersona === 'fisherman') {
+    return (isDangerousWind || isStormyToday)
+      ? `⛔ **Fisherman safety check for ${w.city}:**\n\nWind is ${w.windSpeed} km/h and current conditions are ${w.condition}. Sea conditions are not favorable, so postpone travel and stay close to shore unless the forecast improves.`
+      : `🎣 **Fishing conditions for ${w.city}:**\n\nWind is ${w.windSpeed} km/h and rain risk is ${isRainyToday ? 'elevated' : 'low'}. Early morning or calmer windows are usually the safest and most productive time to head out.`;
+  }
+
+  if (resolvedPersona === 'disaster') {
+    return `🚨 **Disaster management briefing for ${w.city}:**\n\nRain risk is ${isRainyToday ? 'elevated' : 'moderate'}, humidity is ${w.humidity}%, and winds are ${w.windSpeed} km/h. Focus monitoring on low-lying areas, waterlogged roads, and drainage points; escalate preparedness if heavy rain intensifies.`;
+  }
+
+  if (resolvedPersona === 'citizen') {
+    return `👤 **Citizen weather check for ${w.city}:**\n\nCurrent conditions are ${w.condition} with ${w.temp}°C and ${w.humidity}% humidity. For comfort and daily planning, carry an umbrella or plan a lighter commute if rain or strong wind picks up. ${personaGuidance}`;
+  }
 
   /* ===== BENGALI GENERATOR ===== */
   if (language === 'bengali') {

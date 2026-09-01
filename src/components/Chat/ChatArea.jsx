@@ -9,6 +9,7 @@ export default function ChatArea({
   backgroundTint,
   isTyping,
   currentLoc,
+  selectedPersona,
   i18n,
   activeSpeakingId,
   translatedMap,
@@ -30,6 +31,7 @@ export default function ChatArea({
         <WelcomeState
           currentLoc={currentLoc}
           i18n={i18n}
+          selectedPersona={selectedPersona}
           onSelectStarter={onSelectStarter}
         />
       ) : (

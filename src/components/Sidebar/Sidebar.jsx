@@ -56,13 +56,13 @@ export default function Sidebar({
           <span className="pulse-dot"></span>
           <div className="current-location-info">
             <div className="current-location-name">
-              <span>{currentLoc.city}</span>
+              <span>{currentLoc.displayPrimary || currentLoc.city}</span>
               {currentLoc.isGps && <span className="gps-active-badge">GPS</span>}
             </div>
-            {currentLoc.lat && currentLoc.lng && (
+            {currentLoc.latitude != null && currentLoc.longitude != null && (
               <div className="current-location-coords">
-                <span>{currentLoc.lat.toFixed(2)}°N, {currentLoc.lng.toFixed(2)}°E</span>
-                {currentLoc.detail && <span> · {currentLoc.detail}</span>}
+                <span>{currentLoc.latitude.toFixed(2)}°N, {currentLoc.longitude.toFixed(2)}°E</span>
+                {(currentLoc.displaySecondary || currentLoc.detail) && <span> · {currentLoc.displaySecondary || currentLoc.detail}</span>}
               </div>
             )}
           </div>

@@ -98,35 +98,101 @@ export function findClosestIndianCity(lat, lng) {
   return { city: closestCity || 'India', distance: Math.round(minDistance) };
 }
 
+function firstValue(...values) {
+  return values.find((value) => typeof value === 'string' && value.trim())?.trim() || '';
+}
+
+export function formatLocationDisplay(location) {
+  const primary = firstValue(
+    location.premise,
+    location.building,
+    location.houseNumber && location.street ? `${location.houseNumber} ${location.street}` : '',
+    location.street,
+    location.road,
+    location.neighbourhood,
+    location.locality,
+    location.sublocality,
+    location.suburb,
+    location.city,
+    location.district,
+    location.state,
+    'Your Location'
+  );
+  const secondaryParts = [
+    firstValue(location.locality, location.sublocality, location.suburb, location.city, location.district),
+    location.state,
+    location.postalCode,
+    location.country
+  ].filter(Boolean);
+  const secondary = [...new Set(secondaryParts)].filter((part) => part !== primary).join(' · ');
+
+  return { primary, secondary };
+}
+
 /* ===== ROBUST MULTI-TIER REVERSE GEOCODING ENGINE ===== */
 export async function reverseGeocodeCoords(lat, lng) {
-  // Tier 1: BigDataCloud Client Reverse Geocode API (High accuracy for Indian localities/cities)
+  // Prefer the detailed address response before locality-only providers.
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'WeatherGPT/1.0' } });
+    if (res.ok) {
+      const data = await res.json();
+      const a = data?.address;
+      if (a) {
+        const addressData = {
+          ...a,
+          premise: a.building || '',
+          houseNumber: a.house_number || '',
+          street: a.road || '',
+          neighbourhood: a.neighbourhood || '',
+          locality: a.suburb || a.village || a.hamlet || '',
+          city: a.city || a.town || a.municipality || a.county || a.state_district || '',
+          district: a.state_district || a.county || '',
+          state: a.state || '',
+          postalCode: a.postcode || '',
+          country: a.country || '',
+          address: [a.house_number, a.road].filter(Boolean).join(' '),
+          formatted: data.display_name || ''
+        };
+        const display = formatLocationDisplay(addressData);
+        if (display.primary !== 'Your Location') {
+          return { ...addressData, displayPrimary: display.primary, displaySecondary: display.secondary, subdivision: addressData.state };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Detailed reverse geocode error:', err);
+  }
+
+  // Tier 2: BigDataCloud Client Reverse Geocode API
   try {
     const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
-      const locality = (data.locality || '').trim();
-      const city = (data.city || '').trim();
+      const locality = (data.locality || data.localityInfo?.administrative?.[3]?.name || '').trim();
+      const city = (data.city || data.localityInfo?.administrative?.[2]?.name || '').trim();
       const state = (data.principalSubdivision || '').trim();
 
-      let name = '';
-      if (locality && city && locality.toLowerCase() !== city.toLowerCase()) {
-        name = `${locality}, ${city}`;
-      } else if (locality) {
-        name = locality;
-      } else if (city) {
-        name = city;
-      } else if (state) {
-        name = state;
-      }
+      const address = {
+        ...data,
+        premise: firstValue(data.premise, data.building),
+        locality,
+        city,
+        state,
+        postalCode: firstValue(data.postcode, data.postalCode),
+        country: firstValue(data.countryName, data.country),
+        formatted: data.localityInfo?.informative?.[0]?.description || data.formatted || ''
+      };
+      const display = formatLocationDisplay(address);
 
-      if (name) {
+      if (display.primary !== 'Your Location') {
         return {
-          city: name,
-          subdivision: state,
-          country: data.countryName || 'India',
-          formatted: name + (state && !name.includes(state) ? `, ${state}` : '')
+          ...address,
+          city: city || locality || display.primary,
+          displayPrimary: display.primary,
+          displaySecondary: display.secondary,
+          subdivision: state
         };
       }
     }
@@ -134,31 +200,42 @@ export async function reverseGeocodeCoords(lat, lng) {
     console.warn('BigDataCloud reverse geocode error:', err);
   }
 
-  // Tier 2: OpenStreetMap Nominatim (Detailed suburb/neighbourhood/town)
+  // Tier 3: OpenStreetMap fallback
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1`;
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
     const res = await fetch(url, { headers: { 'User-Agent': 'WeatherGPT/1.0' } });
     if (res.ok) {
       const data = await res.json();
       if (data && data.address) {
         const a = data.address;
-        const sub = a.suburb || a.neighbourhood || a.village || a.hamlet || '';
+        const sub = a.neighbourhood || '';
+        const locality = a.suburb || a.village || a.hamlet || '';
         const city = a.city || a.town || a.municipality || a.county || a.state_district || '';
         const state = a.state || '';
+        const address = [a.house_number, a.road].filter(Boolean).join(' ');
+        const addressData = {
+          ...a,
+          premise: a.building || '',
+          houseNumber: a.house_number || '',
+          street: a.road || '',
+          neighbourhood: sub,
+          locality,
+          city,
+          district: a.state_district || a.county || '',
+          state,
+          postalCode: a.postcode || '',
+          country: a.country || '',
+          address,
+          formatted: data.display_name || ''
+        };
+        const display = formatLocationDisplay(addressData);
 
-        let name = '';
-        if (sub && city && sub.toLowerCase() !== city.toLowerCase()) {
-          name = `${sub}, ${city}`;
-        } else {
-          name = sub || city || state || a.country || '';
-        }
-
-        if (name) {
+        if (display.primary !== 'Your Location') {
           return {
-            city: name,
-            subdivision: state,
-            country: a.country || 'India',
-            formatted: name + (state && !name.includes(state) ? `, ${state}` : '')
+            ...addressData,
+            displayPrimary: display.primary,
+            displaySecondary: display.secondary,
+            subdivision: state
           };
         }
       }
@@ -167,43 +244,12 @@ export async function reverseGeocodeCoords(lat, lng) {
     console.warn('Nominatim reverse geocode error:', err);
   }
 
-  // Tier 3: Google Maps Geocoding API (if key available)
-  try {
-    if (CONFIG.GOOGLE_API_KEY) {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${CONFIG.GOOGLE_API_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.status === 'OK' && data.results && data.results.length > 0) {
-        const first = data.results[0];
-        const locality = first.address_components?.find(c => c.types.includes('locality'))?.long_name;
-        const sublocality = first.address_components?.find(c => c.types.includes('sublocality'))?.long_name;
-        const admin = first.address_components?.find(c => c.types.includes('administrative_area_level_1'))?.long_name;
-
-        const cityName = (sublocality && locality && sublocality.toLowerCase() !== locality.toLowerCase())
-          ? `${sublocality}, ${locality}`
-          : (locality || sublocality || first.formatted_address?.split(',')[0]);
-
-        if (cityName) {
-          return {
-            city: cityName,
-            subdivision: admin || '',
-            country: 'India',
-            formatted: first.formatted_address || cityName
-          };
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Google reverse geocode error:', err);
-  }
-
-  // Tier 4: Offline proximity match with nearest Indian city
-  const nearest = findClosestIndianCity(lat, lng);
-  const coordStr = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E`;
+  // Do not replace an exact GPS position with a nearby hardcoded city.
+  const coordStr = `${lat}, ${lng}`;
   return {
-    city: nearest.distance < 40 ? nearest.city : `Near ${nearest.city} (${coordStr})`,
+    city: 'Your Location',
     subdivision: '',
-    country: 'India',
-    formatted: `${nearest.city} area (${coordStr})`
+    country: '',
+    formatted: `Your Location (${coordStr})`
   };
 }

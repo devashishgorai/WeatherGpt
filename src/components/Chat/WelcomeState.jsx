@@ -1,6 +1,11 @@
 'use client';
 
-export default function WelcomeState({ currentLoc, i18n, onSelectStarter }) {
+import { PERSONA_CONFIG } from '@/lib/constants';
+
+export default function WelcomeState({ currentLoc, i18n, selectedPersona, onSelectStarter }) {
+  const roleConfig = PERSONA_CONFIG[selectedPersona] || PERSONA_CONFIG.citizen;
+  const starterCards = roleConfig.starterCards?.length ? roleConfig.starterCards : (i18n.starters || []);
+
   return (
     <div className="welcome-container">
       <div className="welcome-badge">{i18n.welcomeBadge}</div>
@@ -9,7 +14,7 @@ export default function WelcomeState({ currentLoc, i18n, onSelectStarter }) {
         <strong>{currentLoc.city}</strong> {i18n.welcomeSubtitle}
       </p>
       <div className="welcome-cards-grid">
-        {i18n.starters?.map((card, idx) => (
+        {starterCards.map((card, idx) => (
           <div
             key={idx}
             id={`welcome-card-${idx}`}
