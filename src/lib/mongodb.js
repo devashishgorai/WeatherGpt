@@ -17,6 +17,8 @@ export default async function connectDB() {
     cached.promise = mongoose.connect(mongodbUri, {
       dbName: 'weathergpt',
       bufferCommands: false,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
     });
   }
 

@@ -31,11 +31,14 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
   const handleSignup = async (event) => {
     event.preventDefault();
     setIsSubmitting(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           name,
           phone,
@@ -58,8 +61,11 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       setCustomCategory('');
       setProfileImage('');
     } catch (error) {
-      showToast(error.message);
+      showToast(error.name === 'AbortError'
+        ? 'Signup took too long. Check your Vercel and MongoDB settings, then try again.'
+        : error.message);
     } finally {
+      clearTimeout(timeoutId);
       setIsSubmitting(false);
     }
   };
