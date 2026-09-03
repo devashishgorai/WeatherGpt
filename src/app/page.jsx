@@ -57,7 +57,17 @@ export default function WeatherGptHome() {
     fetchWeatherData
   } = useWeather(showToast);
 
+  const [authenticatedUser, setAuthenticatedUser] = useState(null);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+
   // Geolocation Hook
+  const handleGpsDetected = useCallback((lat, lng, city) => {
+    fetchWeatherData(lat, lng, city);
+    if (!authenticatedUser) {
+      setIsAccountOpen(true);
+    }
+  }, [authenticatedUser, fetchWeatherData]);
+
   const {
     currentLoc,
     setCurrentLoc,
@@ -66,9 +76,7 @@ export default function WeatherGptHome() {
     isDetectingLoc,
     runGpsDetect,
     handleSkipGps
-  } = useGeolocation('', null, null, (lat, lng, city) => {
-    fetchWeatherData(lat, lng, city);
-  });
+  } = useGeolocation('', null, null, handleGpsDetected);
 
   // Search History
   const [searchInput, setSearchInput] = useState('');
@@ -83,7 +91,6 @@ export default function WeatherGptHome() {
   // Persona & Language
   const [selectedPersona, setSelectedPersona] = useState('citizen');
   const [selectedLanguage, setSelectedLanguage] = useState('hindi');
-  const [authenticatedUser, setAuthenticatedUser] = useState(null);
   const i18n = useMemo(() => UI_I18N[selectedLanguage] || UI_I18N.english, [selectedLanguage]);
 
   // Chat state
@@ -99,7 +106,6 @@ export default function WeatherGptHome() {
   const [alertBannerDismissed, setAlertBannerDismissed] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // TTS Speech Hook

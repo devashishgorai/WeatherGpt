@@ -179,8 +179,6 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       <input id="account-name" className="settings-input" type="text" placeholder="Your name" value={name} onChange={(event) => setName(event.target.value)} required />
       <label className="settings-label" htmlFor="account-phone">Phone number</label>
       <input id="account-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={phone} onChange={(event) => setPhone(event.target.value)} required />
-      <label className="settings-label" htmlFor="account-profile-image">Profile picture URL (optional)</label>
-      <input id="account-profile-image" className="settings-input" type="url" placeholder="https://example.com/avatar.jpg" value={profileImage} onChange={(event) => setProfileImage(event.target.value)} />
       <span className="settings-label">Choose your category</span>
       <div className="category-slides" role="radiogroup" aria-label="Choose your category">
         {categories.map((item) => (
