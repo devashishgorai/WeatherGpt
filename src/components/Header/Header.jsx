@@ -9,8 +9,12 @@ export default function Header({
   isCompareOpen,
   onOpenCompare,
   onClearChat,
-  onOpenSettings
+  onOpenSettings,
+  onOpenAccount,
+  authenticatedUser
 }) {
+  const avatarSrc = authenticatedUser?.profileImage || '/default-avatar.svg';
+
   return (
     <header className="main-header">
       <div className="header-left-info">
@@ -22,6 +26,14 @@ export default function Header({
         </h1>
       </div>
       <div className="header-actions-group">
+        <button
+          className={`account-icon-btn ${authenticatedUser ? 'has-user' : ''}`}
+          onClick={onOpenAccount}
+          title={authenticatedUser ? `Account: ${authenticatedUser.name}` : 'Log in or sign up'}
+          aria-label={authenticatedUser ? `Account: ${authenticatedUser.name}` : 'Log in or sign up'}
+        >
+          <img src={avatarSrc} alt={authenticatedUser ? `${authenticatedUser.name} profile` : 'Login'} />
+        </button>
         <button
           id="compare-mode-btn"
           className={`header-btn ${isCompareOpen ? 'active' : ''}`}

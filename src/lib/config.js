@@ -1,6 +1,6 @@
 // Configuration helper for API keys (with localStorage sync in browser)
 export const CONFIG = {
-  GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "AIzaSyDdM4UyMFcKpOsmSP6us9bLN6mYwSYkruw",
+  GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "",
   get CLAUDE_API_KEY() {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('weathergpt_claude_key') || process.env.NEXT_PUBLIC_CLAUDE_API_KEY || "";

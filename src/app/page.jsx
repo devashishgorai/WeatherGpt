@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { UI_I18N } from '@/lib/i18n';
 import { CONFIG } from '@/lib/config';
-import { geocodeAddress } from '@/lib/geocoding';
+import { geocodeAddress, searchLocationAutocomplete } from '@/lib/geocoding';
 import { getBackgroundTintClass, evaluateAlertStatus } from '@/lib/weatherApi';
 import {
   formatWeatherForPrompt,
@@ -27,6 +27,7 @@ import HourlyForecast from '@/components/Forecast/HourlyForecast';
 import GpsOverlay from '@/components/Modals/GpsOverlay';
 import CompareModal from '@/components/Modals/CompareModal';
 import SettingsModal from '@/components/Modals/SettingsModal';
+import AccountModal from '@/components/Modals/AccountModal';
 import AlertBanner from '@/components/UI/AlertBanner';
 import Toast from '@/components/UI/Toast';
 import ErrorBoundary from '@/components/UI/ErrorBoundary';
@@ -72,10 +73,17 @@ export default function WeatherGptHome() {
   // Search History
   const [searchInput, setSearchInput] = useState('');
   const [searchHistory, setSearchHistory] = useState(['New Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru']);
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [isLocationSearching, setIsLocationSearching] = useState(false);
+  const [locationSearchError, setLocationSearchError] = useState('');
+  const [showNoLocationResults, setShowNoLocationResults] = useState(false);
+  const [activeLocationIndex, setActiveLocationIndex] = useState(-1);
+  const locationAbortRef = useRef(null);
 
   // Persona & Language
   const [selectedPersona, setSelectedPersona] = useState('citizen');
   const [selectedLanguage, setSelectedLanguage] = useState('hindi');
+  const [authenticatedUser, setAuthenticatedUser] = useState(null);
   const i18n = useMemo(() => UI_I18N[selectedLanguage] || UI_I18N.english, [selectedLanguage]);
 
   // Chat state
@@ -91,10 +99,18 @@ export default function WeatherGptHome() {
   const [alertBannerDismissed, setAlertBannerDismissed] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // TTS Speech Hook
   const { activeSpeakingId, toggleListen } = useSpeechSynthesis(selectedLanguage);
+
+  const handleAuthSuccess = useCallback((user) => {
+    setAuthenticatedUser(user);
+    if (user?.category) {
+      setSelectedPersona(user.category === 'disaster_manager' ? 'disaster' : user.category === 'other' ? 'citizen' : user.category);
+    }
+  }, []);
 
   // Send message callback
   const handleSendMessage = useCallback(async (textToSend, personaOverride) => {
@@ -165,10 +181,17 @@ export default function WeatherGptHome() {
 
   // Initial Mount
   useEffect(() => {
+    fetch('/api/auth/me')
+      .then((response) => response.ok ? response.json() : { user: null })
+      .then(({ user }) => {
+        if (user) handleAuthSuccess(user);
+      })
+      .catch(() => {});
+
     if (gpsState === 'unsupported' && currentLoc.latitude != null && currentLoc.longitude != null) {
       fetchWeatherData(currentLoc.latitude, currentLoc.longitude, currentLoc.city);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleAuthSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 10-Minute Auto-Refresh Countdown
   useEffect(() => {
@@ -196,44 +219,195 @@ export default function WeatherGptHome() {
       if (e.key === 'Escape') {
         if (isCompareOpen) setIsCompareOpen(false);
         else if (isSettingsOpen) setIsSettingsOpen(false);
+        else if (isAccountOpen) setIsAccountOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCompareOpen, isSettingsOpen, toggleMicrophone]);
+  }, [isCompareOpen, isSettingsOpen, isAccountOpen, toggleMicrophone]);
 
   // Location Search Handler
+  const handleLocationSuggestionSelect = useCallback((suggestion) => {
+    if (!suggestion) return;
+
+    const displayName = suggestion.name || suggestion.city || suggestion.formattedAddress?.split(',')[0] || searchInput;
+    const lat = suggestion.latitude ?? suggestion.lat;
+    const lng = suggestion.longitude ?? suggestion.lng;
+
+    if (lat == null || lng == null) {
+      showToast('⚠️ Selected place is missing coordinates. Please choose another result.');
+      return;
+    }
+
+    setCurrentLoc({
+      latitude: lat,
+      longitude: lng,
+      accuracy: null,
+      address: suggestion.formattedAddress || displayName,
+      displayPrimary: displayName,
+      displaySecondary: [suggestion.city || suggestion.district, suggestion.state, suggestion.country].filter(Boolean).join(' · '),
+      city: suggestion.city || displayName,
+      district: suggestion.district || '',
+      state: suggestion.state || '',
+      country: suggestion.country || '',
+      postalCode: suggestion.postalCode || '',
+      placeId: suggestion.placeId || '',
+      name: displayName,
+      formattedAddress: suggestion.formattedAddress || displayName,
+      source: 'search',
+      isGps: false,
+      detail: suggestion.state || suggestion.district || suggestion.country || ''
+    });
+
+    setSearchInput(displayName);
+    setLocationSuggestions([]);
+    setLocationSearchError('');
+    setShowNoLocationResults(false);
+    setActiveLocationIndex(-1);
+    setSearchHistory((prev) => {
+      const filtered = prev.filter((item) => item.toLowerCase() !== displayName.toLowerCase());
+      return [displayName, ...filtered].slice(0, 5);
+    });
+    fetchWeatherData(lat, lng, displayName);
+    setMobileSidebarOpen(false);
+  }, [fetchWeatherData, searchInput, showToast]);
+
   const handleExecuteSearch = async (targetCity) => {
     if (!targetCity || !targetCity.trim()) return;
     const clean = targetCity.trim();
     const geo = await geocodeAddress(clean);
 
     if (geo) {
+      const lat = geo.latitude ?? geo.lat;
+      const lng = geo.longitude ?? geo.lng;
+      const displayName = geo.name || geo.city || clean;
+
       setCurrentLoc({
-        latitude: geo.lat,
-        longitude: geo.lng,
+        latitude: lat,
+        longitude: lng,
         accuracy: null,
-        address: geo.formattedAddress || geo.city,
-        displayPrimary: geo.city,
-        displaySecondary: [geo.state, geo.country].filter(Boolean).join(' · '),
-        city: geo.city,
+        address: geo.formattedAddress || geo.city || displayName,
+        displayPrimary: displayName,
+        displaySecondary: [geo.city || geo.district, geo.state, geo.country].filter(Boolean).join(' · '),
+        city: geo.city || displayName,
+        district: geo.district || '',
         state: geo.state || '',
         country: geo.country || '',
+        postalCode: geo.postalCode || '',
+        placeId: geo.placeId || '',
+        name: displayName,
+        formattedAddress: geo.formattedAddress || displayName,
         source: 'search',
         isGps: false,
-        detail: geo.state || geo.formattedAddress?.split(',')[1]?.trim() || ''
+        detail: geo.state || geo.district || geo.country || ''
       });
-      setSearchInput('');
+      setSearchInput(displayName);
+      setLocationSuggestions([]);
+      setLocationSearchError('');
+      setShowNoLocationResults(false);
+      setActiveLocationIndex(-1);
       setSearchHistory((prev) => {
-        const filtered = prev.filter((c) => c.toLowerCase() !== geo.city.toLowerCase());
-        return [geo.city, ...filtered].slice(0, 5);
+        const filtered = prev.filter((item) => item.toLowerCase() !== displayName.toLowerCase());
+        return [displayName, ...filtered].slice(0, 5);
       });
-      fetchWeatherData(geo.lat, geo.lng, geo.city);
+      fetchWeatherData(lat, lng, displayName);
       setMobileSidebarOpen(false);
     } else {
       showToast(`❌ Could not locate "${clean}". Please verify spelling.`);
     }
   };
+
+  const handleLocationInputChange = useCallback((value) => {
+    setSearchInput(value);
+    if (!value.trim() || value.trim().length < 2) {
+      setLocationSuggestions([]);
+      setLocationSearchError('');
+      setShowNoLocationResults(false);
+      setActiveLocationIndex(-1);
+      return;
+    }
+  }, []);
+
+  const handleLocationKeyDown = useCallback((event) => {
+    if (event.key === 'ArrowDown' && locationSuggestions.length > 0) {
+      event.preventDefault();
+      setActiveLocationIndex((prev) => (prev < locationSuggestions.length - 1 ? prev + 1 : 0));
+      return;
+    }
+
+    if (event.key === 'ArrowUp' && locationSuggestions.length > 0) {
+      event.preventDefault();
+      setActiveLocationIndex((prev) => (prev > 0 ? prev - 1 : locationSuggestions.length - 1));
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      if (locationSuggestions.length > 0 && activeLocationIndex >= 0) {
+        event.preventDefault();
+        handleLocationSuggestionSelect(locationSuggestions[activeLocationIndex]);
+        return;
+      }
+      if (searchInput.trim()) {
+        event.preventDefault();
+        handleExecuteSearch(searchInput);
+      }
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      setLocationSuggestions([]);
+      setActiveLocationIndex(-1);
+      setLocationSearchError('');
+      setShowNoLocationResults(false);
+    }
+  }, [activeLocationIndex, handleExecuteSearch, handleLocationSuggestionSelect, locationSuggestions, searchInput]);
+
+  useEffect(() => {
+    const query = searchInput.trim();
+    if (query.length < 2) {
+      setLocationSuggestions([]);
+      setLocationSearchError('');
+      setShowNoLocationResults(false);
+      setActiveLocationIndex(-1);
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      if (locationAbortRef.current) {
+        locationAbortRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      locationAbortRef.current = controller;
+      setIsLocationSearching(true);
+      setLocationSearchError('');
+
+      try {
+        const results = await searchLocationAutocomplete(query, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setLocationSuggestions(results);
+        setShowNoLocationResults(results.length === 0);
+        setActiveLocationIndex(results.length > 0 ? 0 : -1);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setLocationSuggestions([]);
+        setShowNoLocationResults(false);
+        setLocationSearchError('Unable to search locations');
+        setActiveLocationIndex(-1);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLocationSearching(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (locationAbortRef.current) {
+        locationAbortRef.current.abort();
+      }
+    };
+  }, [searchInput]);
 
   // Translation handler
   const handleToggleTranslate = async (msg) => {
@@ -335,6 +509,14 @@ export default function WeatherGptHome() {
           searchInput={searchInput}
           setSearchInput={setSearchInput}
           onSearch={handleExecuteSearch}
+          onLocationInputChange={handleLocationInputChange}
+          onLocationKeyDown={handleLocationKeyDown}
+          locationSuggestions={locationSuggestions}
+          isSearchingLocation={isLocationSearching}
+          locationSearchError={locationSearchError}
+          showNoLocationResults={showNoLocationResults}
+          activeLocationIndex={activeLocationIndex}
+          onSuggestionSelect={handleLocationSuggestionSelect}
           searchHistory={searchHistory}
           currentLoc={currentLoc}
           gpsState={gpsState}
@@ -371,6 +553,8 @@ export default function WeatherGptHome() {
             isCompareOpen={isCompareOpen}
             onOpenCompare={() => setIsCompareOpen(true)}
             onClearChat={handleClearConversation}
+            onOpenAccount={() => setIsAccountOpen(true)}
+            authenticatedUser={authenticatedUser}
           />
 
           {/* Chat Messages */}
@@ -457,6 +641,14 @@ export default function WeatherGptHome() {
           weather={weather}
           i18n={i18n}
           showToast={showToast}
+        />
+
+        <AccountModal
+          isOpen={isAccountOpen}
+          onClose={() => setIsAccountOpen(false)}
+          showToast={showToast}
+          onAuthSuccess={handleAuthSuccess}
+          currentUser={authenticatedUser}
         />
 
         {/* Floating Toast */}

@@ -9,6 +9,14 @@ export default function Sidebar({
   searchInput,
   setSearchInput,
   onSearch,
+  onLocationInputChange,
+  onLocationKeyDown,
+  locationSuggestions,
+  isSearchingLocation,
+  locationSearchError,
+  showNoLocationResults,
+  activeLocationIndex,
+  onSuggestionSelect,
   searchHistory,
   currentLoc,
   gpsState,
@@ -48,9 +56,51 @@ export default function Sidebar({
             type="text"
             placeholder={i18n.searchPlaceholder}
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onSearch(searchInput)}
+            role="combobox"
+            aria-expanded={locationSuggestions.length > 0 || isSearchingLocation}
+            aria-controls="location-search-suggestions"
+            aria-autocomplete="list"
+            aria-activedescendant={activeLocationIndex >= 0 ? `location-suggestion-${activeLocationIndex}` : undefined}
+            onChange={(e) => onLocationInputChange(e.target.value)}
+            onKeyDown={onLocationKeyDown}
           />
+          {isSearchingLocation && <span className="search-loading-indicator">Searching…</span>}
+          {locationSuggestions.length > 0 && (
+            <div className="location-suggestions" id="location-search-suggestions" role="listbox">
+              {locationSuggestions.map((suggestion, index) => (
+                <button
+                  key={`${suggestion.placeId || suggestion.formattedAddress || suggestion.name}-${index}`}
+                  id={`location-suggestion-${index}`}
+                  type="button"
+                  className={`location-suggestion-item ${index === activeLocationIndex ? 'active' : ''}`}
+                  role="option"
+                  aria-selected={index === activeLocationIndex}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onSuggestionSelect(suggestion);
+                  }}
+                >
+                  <span className="location-suggestion-pin">📍</span>
+                  <span className="location-suggestion-text">
+                    <span className="location-suggestion-name">{suggestion.name}</span>
+                    <span className="location-suggestion-meta">
+                      {[
+                        suggestion.city || suggestion.district,
+                        suggestion.state,
+                        suggestion.country
+                      ].filter(Boolean).join(' · ') || suggestion.formattedAddress}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!isSearchingLocation && !locationSearchError && searchInput.trim().length >= 2 && showNoLocationResults && (
+            <div className="location-search-status">No locations found</div>
+          )}
+          {locationSearchError && (
+            <div className="location-search-status error">{locationSearchError}</div>
+          )}
         </div>
         <div className="current-location-tag">
           <span className="pulse-dot"></span>
