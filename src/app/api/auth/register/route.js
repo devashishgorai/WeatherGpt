@@ -7,6 +7,11 @@ import { blindIndex, decryptPrivateData, encryptPrivateData } from '@/lib/privat
 
 const CATEGORIES = ['farmer', 'fisherman', 'disaster_manager', 'citizen', 'other'];
 
+function getMissingAuthVariables() {
+  return ['MONGODB_URI', 'AUTH_SESSION_SECRET', 'AUTH_DATA_ENCRYPTION_KEY']
+    .filter((name) => !process.env[name]);
+}
+
 function safeUser(user) {
   return {
     id: String(user._id),
@@ -20,6 +25,14 @@ function safeUser(user) {
 
 export async function POST(request) {
   try {
+    const missingVariables = getMissingAuthVariables();
+    if (missingVariables.length > 0) {
+      return NextResponse.json(
+        { message: `Authentication is not configured on this deployment. Add ${missingVariables.join(', ')} in Vercel Environment Variables, then redeploy.` },
+        { status: 503 }
+      );
+    }
+
     const { name, phone, category, customCategory, profileImage } = await request.json();
 
     if (!name || !phone || !category) {
@@ -79,7 +92,10 @@ export async function POST(request) {
     }
 
     if (error?.message?.includes('is not configured') || error?.message?.includes('must be a 32-byte')) {
-      return NextResponse.json({ message: 'Authentication server configuration is incomplete.' }, { status: 503 });
+      return NextResponse.json(
+        { message: 'Authentication is not configured correctly. Check MONGODB_URI, AUTH_SESSION_SECRET, and AUTH_DATA_ENCRYPTION_KEY in Vercel Environment Variables.' },
+        { status: 503 }
+      );
     }
 
     return NextResponse.json(

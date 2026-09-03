@@ -194,7 +194,14 @@ npm start
 3. In **Environment Variables**, add:
    - `NEXT_PUBLIC_GOOGLE_API_KEY`
    - `NEXT_PUBLIC_GEMINI_API_KEY`
-4. Click **Deploy**. Vercel will automatically build and host your Next.js App Router application!
+  - `MONGODB_URI`
+  - `AUTH_SESSION_SECRET`
+  - `AUTH_DATA_ENCRYPTION_KEY`
+  - `TWILIO_ACCOUNT_SID`
+  - `TWILIO_AUTH_TOKEN`
+  - `TWILIO_VERIFY_SERVICE_SID`
+4. Set the variables for **Production** (and Preview if you test preview deployments). Signup requires `MONGODB_URI`, `AUTH_SESSION_SECRET`, and `AUTH_DATA_ENCRYPTION_KEY`; SMS login also requires the Twilio variables.
+5. Redeploy after saving the variables. Vercel will automatically build and host the Next.js App Router application!
 
 ---
 
