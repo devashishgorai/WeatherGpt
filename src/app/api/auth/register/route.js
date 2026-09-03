@@ -91,6 +91,21 @@ export async function POST(request) {
       return NextResponse.json({ message: 'An account with those details already exists.' }, { status: 409 });
     }
 
+    if (error?.name === 'MongooseServerSelectionError' || error?.name === 'MongoServerSelectionError' || error?.message?.includes('querySrv')) {
+      console.error('Registration database connection failed:', error.name);
+      return NextResponse.json(
+        { message: 'Unable to connect to the account database. Check MongoDB Atlas Network Access and the MONGODB_URI in Vercel, then redeploy.' },
+        { status: 503 }
+      );
+    }
+
+    if (error?.name === 'ValidationError') {
+      return NextResponse.json(
+        { message: 'Some account details are invalid. Please check the form and try again.' },
+        { status: 400 }
+      );
+    }
+
     if (error?.message?.includes('is not configured') || error?.message?.includes('must be a 32-byte')) {
       return NextResponse.json(
         { message: 'Authentication is not configured correctly. Check MONGODB_URI, AUTH_SESSION_SECRET, and AUTH_DATA_ENCRYPTION_KEY in Vercel Environment Variables.' },
@@ -98,8 +113,10 @@ export async function POST(request) {
       );
     }
 
+    console.error('Registration failed:', error?.name || 'UnknownError');
+
     return NextResponse.json(
-      { message: 'Unable to create account right now.' },
+      { message: 'Unable to create the account. Check the Vercel function logs for the registration error.' },
       { status: 500 }
     );
   }
