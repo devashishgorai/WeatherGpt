@@ -5,7 +5,7 @@ export const SESSION_COOKIE = 'weathergpt_session';
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30;
 
 function getSessionSecret() {
-  const secret = process.env.AUTH_SESSION_SECRET || process.env.MONGODB_URI;
+  const secret = process.env.AUTH_SESSION_SECRET;
   if (!secret) throw new Error('AUTH_SESSION_SECRET is not configured.');
   return secret;
 }

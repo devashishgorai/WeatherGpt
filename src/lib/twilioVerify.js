@@ -1,5 +1,15 @@
 import twilio from 'twilio';
 
+const TWILIO_REQUEST_TIMEOUT_MS = 10000;
+
+function withTimeout(request, operation) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`Twilio ${operation} request timed out.`)), TWILIO_REQUEST_TIMEOUT_MS);
+  });
+  return Promise.race([request, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 function getTwilioClient() {
   const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN } = process.env;
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
@@ -15,15 +25,15 @@ function getServiceSid() {
 }
 
 export async function sendVerificationCode(phone) {
-  return getTwilioClient().verify.v2.services(getServiceSid()).verifications.create({
+  return withTimeout(getTwilioClient().verify.v2.services(getServiceSid()).verifications.create({
     to: phone,
     channel: 'sms',
-  });
+  }), 'verification');
 }
 
 export async function checkVerificationCode(phone, code) {
-  return getTwilioClient().verify.v2.services(getServiceSid()).verificationChecks.create({
+  return withTimeout(getTwilioClient().verify.v2.services(getServiceSid()).verificationChecks.create({
     to: phone,
     code,
-  });
+  }), 'verification check');
 }

@@ -23,6 +23,27 @@ function safeUser(user) {
   };
 }
 
+function logRegistrationError(error) {
+  const configuredSecrets = [
+    process.env.MONGODB_URI,
+    process.env.AUTH_SESSION_SECRET,
+    process.env.AUTH_DATA_ENCRYPTION_KEY,
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN,
+    process.env.TWILIO_VERIFY_SERVICE_SID,
+  ].filter(Boolean);
+  const message = String(error?.message || 'Unknown error').replace(
+    new RegExp(configuredSecrets.map((secret) => secret.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g'),
+    '[redacted]'
+  );
+
+  console.error('Registration failed', {
+    name: error?.name || 'UnknownError',
+    code: error?.code || null,
+    message,
+  });
+}
+
 export async function POST(request) {
   try {
     const missingVariables = getMissingAuthVariables();
@@ -33,7 +54,14 @@ export async function POST(request) {
       );
     }
 
-    const { name, phone, category, customCategory, profileImage } = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ message: 'The signup request was not valid JSON.' }, { status: 400 });
+    }
+
+    const { name, phone, category, customCategory, profileImage } = body || {};
 
     if (!name || !phone || !category) {
       return NextResponse.json(
@@ -113,7 +141,7 @@ export async function POST(request) {
       );
     }
 
-    console.error('Registration failed:', error?.name || 'UnknownError');
+    logRegistrationError(error);
 
     return NextResponse.json(
       { message: 'Unable to create the account. Check the Vercel function logs for the registration error.' },

@@ -5,7 +5,8 @@ const otpStore = globalThis.__weathergptOtpStore || new Map();
 globalThis.__weathergptOtpStore = otpStore;
 
 function hashOtp(phone, otp) {
-  const secret = process.env.AUTH_SESSION_SECRET || process.env.MONGODB_URI || 'development-only';
+  const secret = process.env.AUTH_SESSION_SECRET;
+  if (!secret) throw new Error('AUTH_SESSION_SECRET is not configured.');
   return createHash('sha256').update(`${phone}:${otp}:${secret}`).digest('hex');
 }
 

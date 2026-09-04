@@ -12,11 +12,9 @@ const categories = [
 
 export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess, currentUser }) {
   const [mode, setMode] = useState('login');
-  const [loginStep, setLoginStep] = useState('phone');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
-  const [loginOtp, setLoginOtp] = useState('');
   const [category, setCategory] = useState('citizen');
   const [customCategory, setCustomCategory] = useState('');
   const [profileImage, setProfileImage] = useState('');
@@ -47,14 +45,18 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
           profileImage: profileImage.trim(),
         })
       });
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch {
+        result = { message: `Signup request failed (HTTP ${response.status}).` };
+      }
 
-      if (!response.ok) throw new Error(result.message || 'Unable to create account.');
+      if (!response.ok) throw new Error(result.message || `Signup request failed (HTTP ${response.status}).`);
       showToast(result.message || 'Account created successfully.');
       onAuthSuccess(result.user);
       onClose();
       setMode('login');
-      setLoginStep('phone');
       setName('');
       setPhone('');
       setCategory('citizen');
@@ -74,23 +76,16 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      const endpoint = loginStep === 'phone' ? '/api/auth/request-otp' : '/api/auth/login';
-      const body = loginStep === 'phone' ? { phone: loginPhone } : { phone: loginPhone, otp: loginOtp };
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ phone: loginPhone })
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Unable to log in.');
-      if (loginStep === 'phone') {
-        setLoginStep('otp');
-        showToast(result.developmentOtp ? `Development OTP: ${result.developmentOtp}` : 'OTP sent successfully.');
-      } else {
-        onAuthSuccess(result.user);
-        onClose();
-        showToast('Logged in successfully.');
-      }
+      onAuthSuccess(result.user);
+      onClose();
+      showToast('Logged in successfully.');
     } catch (error) {
       showToast(error.message);
     } finally {
@@ -237,21 +232,10 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
           renderAuthenticatedProfile()
         ) : mode === 'login' ? (
           <form className="account-form" onSubmit={handleLogin}>
-            <p className="account-form-note">Enter your registered phone number to receive a six-digit OTP.</p>
-            {loginStep === 'phone' ? (
-              <>
-                <label className="settings-label" htmlFor="login-phone">Phone number</label>
-                <input id="login-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={loginPhone} onChange={(event) => setLoginPhone(event.target.value)} required autoFocus />
-                <button className="account-submit-btn" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Sending OTP...' : 'Send OTP'}</button>
-              </>
-            ) : (
-              <>
-                <div className="otp-phone-row"><span>OTP sent to {loginPhone}</span><button type="button" onClick={() => setLoginStep('phone')}>Change</button></div>
-                <label className="settings-label" htmlFor="login-otp">6-digit OTP</label>
-                <input id="login-otp" className="settings-input otp-input" type="text" inputMode="numeric" autoComplete="one-time-code" placeholder="Enter OTP" maxLength={6} value={loginOtp} onChange={(event) => setLoginOtp(event.target.value.replace(/\D/g, ''))} required autoFocus />
-                <button className="account-submit-btn" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Verifying...' : 'Verify OTP'}</button>
-              </>
-            )}
+            <p className="account-form-note">Enter your registered phone number to log in.</p>
+            <label className="settings-label" htmlFor="login-phone">Phone number</label>
+            <input id="login-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={loginPhone} onChange={(event) => setLoginPhone(event.target.value)} required autoFocus />
+            <button className="account-submit-btn" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Logging in...' : 'Log in'}</button>
           </form>
         ) : (
           <form className="account-form" onSubmit={handleSignup}>

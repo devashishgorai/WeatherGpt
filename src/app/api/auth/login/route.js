@@ -22,17 +22,24 @@ export async function POST(request) {
     const { phone, otp } = await request.json();
     const normalizedPhone = normalizePhone(phone);
 
-    if (!isValidPhone(normalizedPhone) || !/^\d{6}$/.test(String(otp || ''))) {
-      return NextResponse.json({ message: 'Phone number and 6-digit OTP are required.' }, { status: 400 });
+    if (!isValidPhone(normalizedPhone)) {
+      return NextResponse.json({ message: 'Please provide a valid phone number.' }, { status: 400 });
     }
 
     await connectDB();
     const user = await User.findOne({ phoneHash: blindIndex(normalizedPhone) }).select('+phoneHash');
-    const verification = user ? await checkVerificationCode(normalizedPhone, String(otp)) : null;
-    const otpMatches = verification?.status === 'approved';
+    if (!user) {
+      return NextResponse.json({ message: 'No account found for this phone number.' }, { status: 404 });
+    }
 
-    if (!otpMatches) {
-      return NextResponse.json({ message: 'Invalid or expired OTP.' }, { status: 401 });
+    if (otp) {
+      if (!/^\d{6}$/.test(String(otp))) {
+        return NextResponse.json({ message: 'OTP must be 6 digits.' }, { status: 400 });
+      }
+      const verification = await checkVerificationCode(normalizedPhone, String(otp));
+      if (verification?.status !== 'approved') {
+        return NextResponse.json({ message: 'Invalid or expired OTP.' }, { status: 401 });
+      }
     }
 
     const response = NextResponse.json({ success: true, user: safeUser(user) });
