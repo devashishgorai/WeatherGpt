@@ -82,6 +82,12 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
         body: JSON.stringify({ phone: loginPhone })
       });
       const result = await response.json();
+      if (response.status === 404) {
+        setPhone(loginPhone);
+        setMode('signup');
+        showToast('Account not found. Please sign up to continue.');
+        return;
+      }
       if (!response.ok) throw new Error(result.message || 'Unable to log in.');
       onAuthSuccess(result.user);
       onClose();
