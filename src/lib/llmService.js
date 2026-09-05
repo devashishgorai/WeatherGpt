@@ -52,12 +52,16 @@ ${next7Days || 'Unavailable'}
 export function buildSystemPrompt(persona, language, weatherSummary) {
   const normalizedPersona = normalizePersona(persona);
   const role = PERSONA_CONFIG[normalizedPersona] || PERSONA_CONFIG.citizen;
+  const languageInstruction = language === 'bengali'
+    ? 'বাংলা মোড: সম্পূর্ণ উত্তর বাংলায় লিখুন। ইংরেজি বা রোমান হরফ ব্যবহার করবেন না, আবহাওয়ার টেকনিক্যাল শব্দের প্রয়োজন হলে তার বাংলা ব্যাখ্যা দিন।'
+    : `Respond directly in the native script for ${language}.`;
 
   return `You are WeatherGPT, an expert AI meteorological assistant for India with deep localized reasoning.
 
 USER PROFILE:
 - Selected Role: ${role.label.toUpperCase()} (${role.key})
-- Language: ${language.toUpperCase()} (Respond directly in the native script: Bengali, Hindi, Tamil, Telugu, Marathi, or clear English).
+- Language: ${language.toUpperCase()}
+- ${languageInstruction}
 
 ${getPersonaPromptLine(normalizedPersona)}
 
@@ -186,23 +190,23 @@ export function generateSmartLocalResponse(persona, language, weather, userQuery
     q.includes('trawler') || q.includes('wave') || q.includes('dheu')
   );
 
-  if (resolvedPersona === 'farmer' && (isRainQuery || isFarmingQuery)) {
+  if (language !== 'bengali' && resolvedPersona === 'farmer' && (isRainQuery || isFarmingQuery)) {
     return isRainyToday
       ? `🌾 **Farmer advisory for ${w.city}:**\n\nSoil moisture is high (${w.humidity}%) and rain is likely. Hold off on extra irrigation, clear drainage channels, and avoid spraying during active wet conditions. ${personaGuidance}`
       : `🌾 **Farmer advisory for ${w.city}:**\n\nConditions are dry and suitable for fieldwork. Schedule irrigation or crop checks during the cooler parts of the day and keep an eye on moisture levels.`;
   }
 
-  if (resolvedPersona === 'fisherman') {
+  if (language !== 'bengali' && resolvedPersona === 'fisherman') {
     return (isDangerousWind || isStormyToday)
       ? `⛔ **Fisherman safety check for ${w.city}:**\n\nWind is ${w.windSpeed} km/h and current conditions are ${w.condition}. Sea conditions are not favorable, so postpone travel and stay close to shore unless the forecast improves.`
       : `🎣 **Fishing conditions for ${w.city}:**\n\nWind is ${w.windSpeed} km/h and rain risk is ${isRainyToday ? 'elevated' : 'low'}. Early morning or calmer windows are usually the safest and most productive time to head out.`;
   }
 
-  if (resolvedPersona === 'disaster') {
+  if (language !== 'bengali' && resolvedPersona === 'disaster') {
     return `🚨 **Disaster management briefing for ${w.city}:**\n\nRain risk is ${isRainyToday ? 'elevated' : 'moderate'}, humidity is ${w.humidity}%, and winds are ${w.windSpeed} km/h. Focus monitoring on low-lying areas, waterlogged roads, and drainage points; escalate preparedness if heavy rain intensifies.`;
   }
 
-  if (resolvedPersona === 'citizen') {
+  if (language !== 'bengali' && resolvedPersona === 'citizen') {
     return `👤 **Citizen weather check for ${w.city}:**\n\nCurrent conditions are ${w.condition} with ${w.temp}°C and ${w.humidity}% humidity. For comfort and daily planning, carry an umbrella or plan a lighter commute if rain or strong wind picks up. ${personaGuidance}`;
   }
 
