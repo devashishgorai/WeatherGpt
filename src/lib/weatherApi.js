@@ -2,6 +2,25 @@ import { CONFIG } from './config.js';
 import { WMO_WEATHER_TABLE, LANG_CODES } from './constants.js';
 
 /* ===== HELPER FUNCTIONS ===== */
+const NATIVE_DIGIT_MAPS = {
+  bengali: '০১২৩৪৫৬৭৮৯',
+  hindi: '०१२३४५६७८९',
+  tamil: '௦௧௨௩௪௫௬௭௮௯',
+  telugu: '౦౧౨౩౪౫౬౭౮౯',
+  marathi: '०१२३४५६७८९'
+};
+
+export function formatNativeNumber(value, language = 'english') {
+  const text = String(value ?? '');
+  const digits = NATIVE_DIGIT_MAPS[language];
+  if (!digits) return text;
+  return text.replace(/[0-9]/g, digit => digits[digit]);
+}
+
+export function formatNativeText(value, language = 'english') {
+  return formatNativeNumber(value, language);
+}
+
 export function getWmoData(code) {
   return WMO_WEATHER_TABLE[code] || { desc: 'Variable weather', emoji: '🌤️' };
 }

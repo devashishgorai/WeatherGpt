@@ -1,6 +1,6 @@
 'use client';
 
-import { getWeatherEmoji, formatDayLabel } from '@/lib/weatherApi';
+import { formatNativeNumber, getWeatherEmoji, formatDayLabel } from '@/lib/weatherApi';
 
 export default function SevenDayForecast({ forecast, selectedLanguage, i18n }) {
   const daily = forecast.daily || [];
@@ -22,14 +22,14 @@ export default function SevenDayForecast({ forecast, selectedLanguage, i18n }) {
               {getWeatherEmoji(d.condition)}
             </div>
             <div className="daily-temp-row">
-              <span>{d.maxTemp}°</span>
-              <span className="daily-min-temp">{d.minTemp}°</span>
+              <span>{formatNativeNumber(d.maxTemp, selectedLanguage)}°</span>
+              <span className="daily-min-temp">{formatNativeNumber(d.minTemp, selectedLanguage)}°</span>
             </div>
             <div className="rain-bar-track">
               <div className={`rain-bar-fill ${rainClass}`} style={{ width: fillWidth }}></div>
             </div>
             <div className="daily-subtext">
-              💧 {d.precipProb}% {i18n.rainChance}
+              💧 {formatNativeNumber(d.precipProb, selectedLanguage)}% {i18n.rainChance}
             </div>
           </div>
         );

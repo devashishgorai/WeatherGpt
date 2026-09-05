@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 import { PERSONA_CONFIG } from './constants.js';
-import { getWeatherEmoji } from './weatherApi.js';
+import { formatNativeText, getWeatherEmoji } from './weatherApi.js';
 
 function normalizePersona(persona) {
   return PERSONA_CONFIG[persona] ? persona : 'citizen';
@@ -52,9 +52,14 @@ ${next7Days || 'Unavailable'}
 export function buildSystemPrompt(persona, language, weatherSummary) {
   const normalizedPersona = normalizePersona(persona);
   const role = PERSONA_CONFIG[normalizedPersona] || PERSONA_CONFIG.citizen;
-  const languageInstruction = language === 'bengali'
-    ? 'বাংলা মোড: সম্পূর্ণ উত্তর বাংলায় লিখুন। ইংরেজি বা রোমান হরফ ব্যবহার করবেন না, আবহাওয়ার টেকনিক্যাল শব্দের প্রয়োজন হলে তার বাংলা ব্যাখ্যা দিন।'
-    : `Respond directly in the native script for ${language}.`;
+  const languageInstructions = {
+    bengali: 'বাংলা মোড: সম্পূর্ণ উত্তর বাংলায় লিখুন। ইংরেজি বা রোমান হরফ ব্যবহার করবেন না, আবহাওয়ার টেকনিক্যাল শব্দের প্রয়োজন হলে তার বাংলা ব্যাখ্যা দিন।',
+    hindi: 'हिंदी मोड: पूरा उत्तर देवनागरी हिंदी में लिखें। अंग्रेज़ी या रोमन लिपि का उपयोग न करें।',
+    tamil: 'தமிழ் பயன்முறை: முழு பதிலையும் தமிழ் எழுத்தில் எழுதுங்கள். ஆங்கிலம் அல்லது ரோமன் எழுத்துகளைப் பயன்படுத்த வேண்டாம்.',
+    telugu: 'తెలుగు మోడ్: మొత్తం సమాధానాన్ని తెలుగు లిపిలో రాయండి. ఇంగ్లీష్ లేదా రోమన్ లిపిని ఉపయోగించవద్దు.',
+    marathi: 'मराठी मोड: संपूर्ण उत्तर देवनागरी मराठीत लिहा. इंग्रजी किंवा रोमन लिपी वापरू नका.'
+  };
+  const languageInstruction = languageInstructions[language] || `Respond directly in the native script for ${language}.`;
 
   return `You are WeatherGPT, an expert AI meteorological assistant for India with deep localized reasoning.
 
@@ -102,7 +107,7 @@ export async function executeClaudeRequest(systemPrompt, conversationHistory, ex
 }
 
 /* ===== ADVANCED DYNAMIC METEOROLOGICAL REASONING ENGINE ===== */
-export function generateSmartLocalResponse(persona, language, weather, userQuery, forecast) {
+function generateSmartLocalResponseRaw(persona, language, weather, userQuery, forecast) {
   const w = weather || {
     city: 'your location',
     temp: 28,
@@ -190,23 +195,23 @@ export function generateSmartLocalResponse(persona, language, weather, userQuery
     q.includes('trawler') || q.includes('wave') || q.includes('dheu')
   );
 
-  if (language !== 'bengali' && resolvedPersona === 'farmer' && (isRainQuery || isFarmingQuery)) {
+  if (language === 'english' && resolvedPersona === 'farmer' && (isRainQuery || isFarmingQuery)) {
     return isRainyToday
       ? `🌾 **Farmer advisory for ${w.city}:**\n\nSoil moisture is high (${w.humidity}%) and rain is likely. Hold off on extra irrigation, clear drainage channels, and avoid spraying during active wet conditions. ${personaGuidance}`
       : `🌾 **Farmer advisory for ${w.city}:**\n\nConditions are dry and suitable for fieldwork. Schedule irrigation or crop checks during the cooler parts of the day and keep an eye on moisture levels.`;
   }
 
-  if (language !== 'bengali' && resolvedPersona === 'fisherman') {
+  if (language === 'english' && resolvedPersona === 'fisherman') {
     return (isDangerousWind || isStormyToday)
       ? `⛔ **Fisherman safety check for ${w.city}:**\n\nWind is ${w.windSpeed} km/h and current conditions are ${w.condition}. Sea conditions are not favorable, so postpone travel and stay close to shore unless the forecast improves.`
       : `🎣 **Fishing conditions for ${w.city}:**\n\nWind is ${w.windSpeed} km/h and rain risk is ${isRainyToday ? 'elevated' : 'low'}. Early morning or calmer windows are usually the safest and most productive time to head out.`;
   }
 
-  if (language !== 'bengali' && resolvedPersona === 'disaster') {
+  if (language === 'english' && resolvedPersona === 'disaster') {
     return `🚨 **Disaster management briefing for ${w.city}:**\n\nRain risk is ${isRainyToday ? 'elevated' : 'moderate'}, humidity is ${w.humidity}%, and winds are ${w.windSpeed} km/h. Focus monitoring on low-lying areas, waterlogged roads, and drainage points; escalate preparedness if heavy rain intensifies.`;
   }
 
-  if (language !== 'bengali' && resolvedPersona === 'citizen') {
+  if (language === 'english' && resolvedPersona === 'citizen') {
     return `👤 **Citizen weather check for ${w.city}:**\n\nCurrent conditions are ${w.condition} with ${w.temp}°C and ${w.humidity}% humidity. For comfort and daily planning, carry an umbrella or plan a lighter commute if rain or strong wind picks up. ${personaGuidance}`;
   }
 
@@ -298,6 +303,40 @@ export function generateSmartLocalResponse(persona, language, weather, userQuery
     return `📍 **${w.city} मौसम सारांश:**\n\n• तापमान: ${w.temp}°C (महसूस: ${w.feelsLike}°C)\n• मौसम: ${w.condition}\n• नमी: ${w.humidity}% | हवा: ${w.windSpeed} किमी/घंटा\n\n${isStormyToday ? '⚠️ तूफान से सावधान रहें।' : isRainyToday ? '🌧️ बारिश की संभावना है।' : '😊 मौसम सुखद बना हुआ है!'}`;
   }
 
+  /* ===== TAMIL, TELUGU, AND MARATHI GENERATORS ===== */
+  if (language === 'tamil') {
+    const personaAdvice = resolvedPersona === 'farmer'
+      ? '🌾 மழை வாய்ப்பு இருப்பதால் கூடுதல் பாசனத்தைத் தவிர்த்து, வயல் வடிகால் நிலையைச் சரிபார்க்கவும்.'
+      : resolvedPersona === 'fisherman'
+        ? `🎣 காற்றின் வேகம் ${w.windSpeed} கிமீ/மணி. கடலுக்குச் செல்லும் முன் பாதுகாப்பு எச்சரிக்கைகளைச் சரிபார்க்கவும்.`
+        : resolvedPersona === 'disaster'
+          ? '🚨 தாழ்வான பகுதிகள், நீர் தேங்கும் சாலைகள் மற்றும் வடிகால் பகுதிகளைத் தொடர்ந்து கண்காணிக்கவும்.'
+          : '☂️ வெளியே செல்லும்போது குடையை எடுத்துச் செல்லுங்கள்; பயணத்திற்கு முன் மழை நிலையைச் சரிபார்க்கவும்.';
+    return `📍 **${w.city} வானிலை தகவல்:**\n\n• வெப்பநிலை: ${w.temp}°C\n• ஈரப்பதம்: ${w.humidity}%\n• காற்றின் வேகம்: ${w.windSpeed} கிமீ/மணி\n\n${isRainyToday ? '🌧️ இன்று மழை பெய்யும் வாய்ப்பு உள்ளது.' : '😊 வானிலை நிலையானதாக உள்ளது.'}\n${personaAdvice}`;
+  }
+
+  if (language === 'telugu') {
+    const personaAdvice = resolvedPersona === 'farmer'
+      ? '🌾 వర్షం వచ్చే అవకాశం ఉన్నందున అదనపు నీటిపారుదలను నిలిపి, పొలంలోని డ్రైనేజీని పరిశీలించండి.'
+      : resolvedPersona === 'fisherman'
+        ? `🎣 గాలి వేగం గంటకు ${w.windSpeed} కి.మీ. సముద్రంలోకి వెళ్లే ముందు భద్రతా హెచ్చరికలను పరిశీలించండి.`
+        : resolvedPersona === 'disaster'
+          ? '🚨 లోతట్టు ప్రాంతాలు, నీరు నిలిచే రహదారులు మరియు డ్రైనేజీ ప్రాంతాలను నిరంతరం పర్యవేక్షించండి.'
+          : '☂️ బయటకు వెళ్లేటప్పుడు గొడుగు తీసుకెళ్లండి; ప్రయాణానికి ముందు వర్ష పరిస్థితిని పరిశీలించండి.';
+    return `📍 **${w.city} వాతావరణ సమాచారం:**\n\n• ఉష్ణోగ్రత: ${w.temp}°C\n• తేమ: ${w.humidity}%\n• గాలి వేగం: గంటకు ${w.windSpeed} కి.మీ.\n\n${isRainyToday ? '🌧️ ఈరోజు వర్షం పడే అవకాశం ఉంది.' : '😊 వాతావరణం స్థిరంగా ఉంది.'}\n${personaAdvice}`;
+  }
+
+  if (language === 'marathi') {
+    const personaAdvice = resolvedPersona === 'farmer'
+      ? '🌾 पावसाची शक्यता असल्याने अतिरिक्त सिंचन थांबवा आणि शेतातील निचरा तपासा.'
+      : resolvedPersona === 'fisherman'
+        ? `🎣 वाऱ्याचा वेग ${w.windSpeed} किमी/तास आहे. समुद्रात जाण्यापूर्वी सुरक्षा इशारे तपासा.`
+        : resolvedPersona === 'disaster'
+          ? '🚨 सखल भाग, पाणी साचणारे रस्ते आणि निचरा व्यवस्था यांचे सतत निरीक्षण करा.'
+          : '☂️ बाहेर पडताना छत्री सोबत ठेवा आणि प्रवासापूर्वी पावसाची स्थिती तपासा.';
+    return `📍 **${w.city} हवामान माहिती:**\n\n• तापमान: ${w.temp}°C\n• आर्द्रता: ${w.humidity}%\n• वाऱ्याचा वेग: ${w.windSpeed} किमी/तास\n\n${isRainyToday ? '🌧️ आज पावसाची शक्यता आहे.' : '😊 हवामान स्थिर आहे.'}\n${personaAdvice}`;
+  }
+
   /* ===== ENGLISH GENERATOR ===== */
   if (isTomorrowQuery) {
     if (isRainQuery) {
@@ -321,4 +360,8 @@ export function generateSmartLocalResponse(persona, language, weather, userQuery
   }
 
   return `📍 **${w.city} Weather Briefing:**\n\n• Temperature: ${w.temp}°C (Feels like: ${w.feelsLike}°C)\n• Condition: ${w.condition}\n• Humidity: ${w.humidity}% | Wind: ${w.windSpeed} km/h\n\n${isStormyToday ? '⚠️ Active severe weather alert.' : isRainyToday ? '🌧️ Showers expected today.' : '😊 Stable weather conditions.'}`;
+}
+
+export function generateSmartLocalResponse(persona, language, weather, userQuery, forecast) {
+  return formatNativeText(generateSmartLocalResponseRaw(persona, language, weather, userQuery, forecast), language);
 }

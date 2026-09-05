@@ -1,8 +1,8 @@
 'use client';
 
-import { getWeatherEmoji, formatHourLabel } from '@/lib/weatherApi';
+import { formatNativeNumber, getWeatherEmoji, formatHourLabel } from '@/lib/weatherApi';
 
-export default function HourlyForecast({ forecast }) {
+export default function HourlyForecast({ forecast, selectedLanguage }) {
   const hourly = forecast.hourly || [];
   if (hourly.length === 0) return null;
 
@@ -17,10 +17,10 @@ export default function HourlyForecast({ forecast }) {
             {getWeatherEmoji(h.condition)}
           </div>
           <div className="hourly-temp-label">
-            {h.temp}°
+            {formatNativeNumber(h.temp, selectedLanguage)}°
           </div>
           <div className="hourly-rain-label">
-            💧 {h.precipProb}%
+            💧 {formatNativeNumber(h.precipProb, selectedLanguage)}%
           </div>
         </div>
       ))}

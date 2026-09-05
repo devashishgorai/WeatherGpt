@@ -617,7 +617,7 @@ export default function WeatherGptHome() {
           )}
 
           {showTwentyFourHr && (
-            <HourlyForecast forecast={forecast} />
+            <HourlyForecast forecast={forecast} selectedLanguage={selectedLanguage} />
           )}
 
           {/* Quick Question Chips */}

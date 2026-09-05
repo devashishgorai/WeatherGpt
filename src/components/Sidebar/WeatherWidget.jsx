@@ -1,6 +1,6 @@
 'use client';
 
-import { getWeatherEmoji, formatClockTime, getElapsedTimeLabel } from '@/lib/weatherApi';
+import { formatNativeNumber, getWeatherEmoji, formatClockTime, getElapsedTimeLabel } from '@/lib/weatherApi';
 
 export default function WeatherWidget({
   weather,
@@ -27,8 +27,8 @@ export default function WeatherWidget({
       ) : weather ? (
         <>
           <div className="widget-temp-row">
-            <div className="widget-temp-large">{weather.temp}°</div>
-            <div className="widget-temp-feels">{i18n.feelsLike} {weather.feelsLike}°</div>
+            <div className="widget-temp-large">{formatNativeNumber(weather.temp, selectedLanguage)}°</div>
+            <div className="widget-temp-feels">{i18n.feelsLike} {formatNativeNumber(weather.feelsLike, selectedLanguage)}°</div>
           </div>
           <div className="widget-condition-text">
             <span>{getWeatherEmoji(weather.condition)}</span>
@@ -36,15 +36,15 @@ export default function WeatherWidget({
           </div>
           <div className="widget-stats-grid">
             <div className="widget-stat-box">
-              <div className="stat-val">💧 {weather.humidity}%</div>
+              <div className="stat-val">💧 {formatNativeNumber(weather.humidity, selectedLanguage)}%</div>
               <div className="stat-lbl">{i18n.humidity}</div>
             </div>
             <div className="widget-stat-box">
-              <div className="stat-val">💨 {weather.windSpeed}</div>
+              <div className="stat-val">💨 {formatNativeNumber(weather.windSpeed, selectedLanguage)}</div>
               <div className="stat-lbl">{i18n.wind}</div>
             </div>
             <div className="widget-stat-box">
-              <div className="stat-val">☀️ {weather.uvIndex}</div>
+              <div className="stat-val">☀️ {formatNativeNumber(weather.uvIndex, selectedLanguage)}</div>
               <div className="stat-lbl">{i18n.uv}</div>
             </div>
           </div>
@@ -66,7 +66,7 @@ export default function WeatherWidget({
             </button>
           </div>
           <div className="auto-refresh-countdown">
-            {i18n.autoRefreshPrefix}{countdownMinutes}:{countdownSeconds}
+            {i18n.autoRefreshPrefix}{formatNativeNumber(countdownMinutes, selectedLanguage)}:{formatNativeNumber(countdownSeconds, selectedLanguage)}
           </div>
         </>
       ) : (
