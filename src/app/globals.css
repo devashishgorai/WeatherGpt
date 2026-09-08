@@ -2071,6 +2071,17 @@ body {
 .account-submit-btn:hover { background: var(--primary-dark); }
 .account-submit-btn:disabled { opacity: 0.65; cursor: wait; }
 
+.account-text-btn {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  padding: 8px 0 0;
+  font: 600 12px var(--font-family);
+  cursor: pointer;
+}
+
+.account-text-btn:hover { color: var(--primary-dark); text-decoration: underline; }
+
 /* Mobile Hamburger & Overlay */
 .mobile-nav-toggle {
   display: none;

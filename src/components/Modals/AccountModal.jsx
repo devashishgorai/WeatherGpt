@@ -15,6 +15,12 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [resetPhone, setResetPhone] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetStep, setResetStep] = useState('phone');
   const [loginPhone, setLoginPhone] = useState('');
   const [category, setCategory] = useState('citizen');
   const [customCategory, setCustomCategory] = useState('');
@@ -48,6 +54,7 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
           name,
           phone,
           email,
+          password,
           category,
           customCategory: category === 'other' ? customCategory : '',
           profileImage: profileImage.trim(),
@@ -68,6 +75,8 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       setName('');
       setPhone('');
       setEmail('');
+      setPassword('');
+      setLoginPassword('');
       setCategory('citizen');
       setCustomCategory('');
       setProfileImage('');
@@ -88,7 +97,7 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: loginPhone })
+        body: JSON.stringify({ phone: loginPhone, password: loginPassword })
       });
       const result = await response.json();
       if (response.status === 404) {
@@ -101,6 +110,52 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       onAuthSuccess(result.user);
       onClose();
       showToast('Logged in successfully.');
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRequestPasswordReset = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: resetPhone })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Unable to send reset code.');
+      setResetStep('verify');
+      showToast('Verification code sent to your phone.');
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: resetPhone, otp: resetOtp, password: resetPassword })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Unable to reset your password.');
+      setLoginPhone(resetPhone);
+      setLoginPassword('');
+      setResetPhone('');
+      setResetOtp('');
+      setResetPassword('');
+      setResetStep('phone');
+      setMode('login');
+      showToast('Password updated. You can now log in.');
     } catch (error) {
       showToast(error.message);
     } finally {
@@ -243,6 +298,8 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       <input id="account-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={phone} onChange={(event) => setPhone(event.target.value)} required />
       <label className="settings-label" htmlFor="account-email">Gmail or email address <span className="optional-field">(optional)</span></label>
       <input id="account-email" className="settings-input" type="email" placeholder="you@gmail.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+        <label className="settings-label" htmlFor="account-password">Password</label>
+        <input id="account-password" className="settings-input" type="password" placeholder="At least 8 characters" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
       <span className="settings-label">Choose your category</span>
       <div className="category-slides" role="radiogroup" aria-label="Choose your category">
         {categories.map((item) => (
@@ -293,12 +350,35 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
 
         {currentUser ? (
           renderAuthenticatedProfile()
+        ) : mode === 'reset' ? (
+          resetStep === 'phone' ? (
+            <form className="account-form" onSubmit={handleRequestPasswordReset}>
+              <p className="account-form-note">Enter your registered phone number to receive a verification code.</p>
+              <label className="settings-label" htmlFor="reset-phone">Phone number</label>
+              <input id="reset-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={resetPhone} onChange={(event) => setResetPhone(event.target.value)} required autoFocus />
+              <button className="account-submit-btn" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Sending code...' : 'Send verification code'}</button>
+              <button className="account-text-btn" type="button" onClick={() => setMode('login')}>Back to log in</button>
+            </form>
+          ) : (
+            <form className="account-form" onSubmit={handleResetPassword}>
+              <p className="account-form-note">Enter the code sent to your phone and choose a new password.</p>
+              <label className="settings-label" htmlFor="reset-otp">Verification code</label>
+              <input id="reset-otp" className="settings-input otp-input" type="text" inputMode="numeric" maxLength={6} placeholder="6-digit code" value={resetOtp} onChange={(event) => setResetOtp(event.target.value)} required autoFocus />
+              <label className="settings-label" htmlFor="reset-password">New password</label>
+              <input id="reset-password" className="settings-input" type="password" placeholder="At least 8 characters" value={resetPassword} onChange={(event) => setResetPassword(event.target.value)} minLength={8} required />
+              <button className="account-submit-btn" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Updating password...' : 'Set new password'}</button>
+              <button className="account-text-btn" type="button" onClick={() => setResetStep('phone')}>Use a different phone number</button>
+            </form>
+          )
         ) : mode === 'login' ? (
           <form className="account-form" onSubmit={handleLogin}>
-            <p className="account-form-note">Enter your registered phone number to log in.</p>
+            <p className="account-form-note">Enter your registered phone number and password to log in.</p>
             <label className="settings-label" htmlFor="login-phone">Phone number</label>
             <input id="login-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={loginPhone} onChange={(event) => setLoginPhone(event.target.value)} required autoFocus />
+            <label className="settings-label" htmlFor="login-password">Password</label>
+            <input id="login-password" className="settings-input" type="password" placeholder="Your password" value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} minLength={8} required />
             <button className="account-submit-btn" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Logging in...' : 'Log in'}</button>
+            <button className="account-text-btn" type="button" onClick={() => setMode('reset')}>Forgot password?</button>
           </form>
         ) : (
           <form className="account-form" onSubmit={handleSignup}>

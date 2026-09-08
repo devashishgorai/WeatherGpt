@@ -5,6 +5,7 @@ import { setSessionCookie } from '@/lib/auth';
 import { normalizePhone, isValidPhone } from '@/lib/phone';
 import { blindIndex, decryptPrivateData, encryptPrivateData } from '@/lib/privateData';
 import { sendWelcomeEmail } from '@/lib/mailer';
+import bcrypt from 'bcryptjs';
 
 const CATEGORIES = ['farmer', 'fisherman', 'disaster_manager', 'citizen', 'other'];
 
@@ -63,11 +64,11 @@ export async function POST(request) {
       return NextResponse.json({ message: 'The signup request was not valid JSON.' }, { status: 400 });
     }
 
-    const { name, phone, email, category, customCategory, profileImage } = body || {};
+    const { name, phone, email, password, category, customCategory, profileImage } = body || {};
 
-    if (!name || !phone || !category) {
+    if (!name || !phone || !password || !category) {
       return NextResponse.json(
-        { message: 'Name, phone, and category are required.' },
+        { message: 'Name, phone, password, and category are required.' },
         { status: 400 }
       );
     }
@@ -75,6 +76,13 @@ export async function POST(request) {
     if (typeof name !== 'string' || name.trim().length < 2) {
       return NextResponse.json(
         { message: 'Name must be at least 2 characters long.' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json(
+        { message: 'Password must be at least 8 characters long.' },
         { status: 400 }
       );
     }
@@ -120,6 +128,7 @@ export async function POST(request) {
       nameEncrypted: encryptPrivateData(name.trim()),
       phoneEncrypted: encryptPrivateData(normalizedPhone),
       phoneHash,
+      passwordHash: await bcrypt.hash(password, 12),
       ...(normalizedEmail ? { emailEncrypted: encryptPrivateData(normalizedEmail), emailHash: blindIndex(normalizedEmail) } : {}),
       profileImage: typeof profileImage === 'string' ? profileImage.trim() : '',
       category,

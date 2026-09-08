@@ -3,8 +3,8 @@ import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { setSessionCookie } from '@/lib/auth';
 import { normalizePhone, isValidPhone } from '@/lib/phone';
-import { checkVerificationCode } from '@/lib/twilioVerify';
 import { blindIndex, decryptPrivateData } from '@/lib/privateData';
+import bcrypt from 'bcryptjs';
 
 function safeUser(user) {
   return {
@@ -20,27 +20,25 @@ function safeUser(user) {
 
 export async function POST(request) {
   try {
-    const { phone, otp } = await request.json();
+    const { phone, password } = await request.json();
     const normalizedPhone = normalizePhone(phone);
 
     if (!isValidPhone(normalizedPhone)) {
       return NextResponse.json({ message: 'Please provide a valid phone number.' }, { status: 400 });
     }
 
+    if (typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json({ message: 'Please provide your password.' }, { status: 400 });
+    }
+
     await connectDB();
-    const user = await User.findOne({ phoneHash: blindIndex(normalizedPhone) }).select('+phoneHash');
+    const user = await User.findOne({ phoneHash: blindIndex(normalizedPhone) }).select('+phoneHash +passwordHash');
     if (!user) {
       return NextResponse.json({ message: 'No account found for this phone number.' }, { status: 404 });
     }
 
-    if (otp) {
-      if (!/^\d{6}$/.test(String(otp))) {
-        return NextResponse.json({ message: 'OTP must be 6 digits.' }, { status: 400 });
-      }
-      const verification = await checkVerificationCode(normalizedPhone, String(otp));
-      if (verification?.status !== 'approved') {
-        return NextResponse.json({ message: 'Invalid or expired OTP.' }, { status: 401 });
-      }
+    if (!user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+      return NextResponse.json({ message: 'Incorrect phone number or password.' }, { status: 401 });
     }
 
     const response = NextResponse.json({ success: true, user: safeUser(user) });
