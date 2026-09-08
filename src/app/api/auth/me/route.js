@@ -10,7 +10,7 @@ export async function GET() {
     if (!userId) return NextResponse.json({ user: null });
 
     await connectDB();
-    const user = await User.findById(userId).select('nameEncrypted phoneEncrypted emailEncrypted category customCategory profileImage');
+    const user = await User.findById(userId).select('nameEncrypted phoneEncrypted emailEncrypted category customCategory profileImage +passwordHash');
     if (!user) return NextResponse.json({ user: null });
 
     return NextResponse.json({
@@ -22,6 +22,7 @@ export async function GET() {
         category: user.category,
         customCategory: user.customCategory,
         profileImage: user.profileImage || '',
+        hasPassword: Boolean(user.passwordHash),
       }
     });
   } catch {

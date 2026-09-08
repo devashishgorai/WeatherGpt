@@ -5,10 +5,34 @@ import User from '@/models/User';
 import { normalizePhone, isValidPhone } from '@/lib/phone';
 import { checkVerificationCode } from '@/lib/twilioVerify';
 import { blindIndex } from '@/lib/privateData';
+import { verifyOtp } from '@/lib/otp';
 
 export async function POST(request) {
   try {
-    const { phone, otp, password } = await request.json();
+    const { phone, email, channel = 'phone', otp, password } = await request.json();
+    if (channel === 'email') {
+      const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        return NextResponse.json({ message: 'Please provide a valid email address.' }, { status: 400 });
+      }
+      if (!/^\d{6}$/.test(String(otp || ''))) {
+        return NextResponse.json({ message: 'OTP must be 6 digits.' }, { status: 400 });
+      }
+      if (typeof password !== 'string' || password.length < 8) {
+        return NextResponse.json({ message: 'Password must be at least 8 characters long.' }, { status: 400 });
+      }
+
+      await connectDB();
+      const user = await User.findOne({ emailHash: blindIndex(normalizedEmail) }).select('+emailHash');
+      if (!user) return NextResponse.json({ message: 'No account found for this email address.' }, { status: 404 });
+      if (!verifyOtp(normalizedEmail, String(otp))) {
+        return NextResponse.json({ message: 'Invalid or expired OTP.' }, { status: 401 });
+      }
+      user.passwordHash = await bcrypt.hash(password, 12);
+      await user.save();
+      return NextResponse.json({ success: true, message: 'Password updated successfully.' });
+    }
+
     const normalizedPhone = normalizePhone(phone);
 
     if (!isValidPhone(normalizedPhone)) {

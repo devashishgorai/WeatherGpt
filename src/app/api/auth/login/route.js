@@ -15,6 +15,7 @@ function safeUser(user) {
     category: user.category,
     customCategory: user.customCategory,
     profileImage: user.profileImage || '',
+    hasPassword: Boolean(user.passwordHash),
   };
 }
 

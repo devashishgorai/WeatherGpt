@@ -18,9 +18,12 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
   const [password, setPassword] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [resetPhone, setResetPhone] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetChannel, setResetChannel] = useState('email');
   const [resetOtp, setResetOtp] = useState('');
   const [resetPassword, setResetPassword] = useState('');
   const [resetStep, setResetStep] = useState('phone');
+  const [resetError, setResetError] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [category, setCategory] = useState('citizen');
   const [customCategory, setCustomCategory] = useState('');
@@ -28,12 +31,18 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [profilePassword, setProfilePassword] = useState('');
+  const [profilePasswordConfirm, setProfilePasswordConfirm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setProfileImage(currentUser?.profileImage || '');
     setEditName(currentUser?.name || '');
     setEditEmail(currentUser?.email || '');
+    setEmailOtp('');
+    setEmailOtpSent(false);
     setIsEditingDetails(false);
   }, [currentUser, isOpen]);
 
@@ -124,13 +133,19 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       const response = await fetch('/api/auth/request-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: resetPhone })
+        body: JSON.stringify({
+          channel: resetChannel,
+          phone: resetPhone,
+          email: resetEmail
+        })
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Unable to send reset code.');
       setResetStep('verify');
+      setResetError('');
       showToast('Verification code sent to your phone.');
     } catch (error) {
+      setResetError(error.message);
       showToast(error.message);
     } finally {
       setIsSubmitting(false);
@@ -144,16 +159,24 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: resetPhone, otp: resetOtp, password: resetPassword })
+        body: JSON.stringify({
+          channel: resetChannel,
+          phone: resetPhone,
+          email: resetEmail,
+          otp: resetOtp,
+          password: resetPassword
+        })
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Unable to reset your password.');
       setLoginPhone(resetPhone);
       setLoginPassword('');
       setResetPhone('');
+      setResetEmail('');
       setResetOtp('');
       setResetPassword('');
       setResetStep('phone');
+      setResetError('');
       setMode('login');
       showToast('Password updated. You can now log in.');
     } catch (error) {
@@ -189,13 +212,33 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
   const handleSaveDetails = async (event) => {
     event.preventDefault();
     if (!currentUser) return;
+    const emailChanged = editEmail.trim().toLowerCase() !== (currentUser.email || '').trim().toLowerCase();
+    if (emailChanged && !emailOtpSent) {
+      setIsSubmitting(true);
+      try {
+        const response = await fetch('/api/auth/profile/request-email-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: editEmail })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Unable to send email verification code.');
+        setEmailOtpSent(true);
+        showToast('Verification code sent to your new email.');
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
     setIsSubmitting(true);
 
     try {
       const response = await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editName, email: editEmail })
+        body: JSON.stringify({ name: editName, email: editEmail, emailOtp })
       });
       const result = await response.json();
 
@@ -203,7 +246,35 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
 
       onAuthSuccess({ ...currentUser, ...result.user });
       setIsEditingDetails(false);
+      setEmailOtp('');
+      setEmailOtpSent(false);
       showToast('Account details updated.');
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddProfilePassword = async (event) => {
+    event.preventDefault();
+    if (profilePassword !== profilePasswordConfirm) {
+      showToast('Passwords do not match.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: profilePassword })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Unable to add password.');
+      onAuthSuccess({ ...currentUser, ...result.user, hasPassword: true });
+      setProfilePassword('');
+      setProfilePasswordConfirm('');
+      showToast('Password added successfully.');
     } catch (error) {
       showToast(error.message);
     } finally {
@@ -268,7 +339,13 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
           <label className="settings-label" htmlFor="edit-account-name">Name</label>
           <input id="edit-account-name" className="settings-input" type="text" value={editName} onChange={(event) => setEditName(event.target.value)} required />
           <label className="settings-label" htmlFor="edit-account-email">Gmail or email address <span className="optional-field">(optional)</span></label>
-          <input id="edit-account-email" className="settings-input" type="email" placeholder="you@gmail.com" value={editEmail} onChange={(event) => setEditEmail(event.target.value)} />
+          <input id="edit-account-email" className="settings-input" type="email" placeholder="you@gmail.com" value={editEmail} onChange={(event) => { setEditEmail(event.target.value); setEmailOtp(''); setEmailOtpSent(false); }} />
+          {emailOtpSent && (
+            <>
+              <label className="settings-label" htmlFor="edit-account-email-otp">Email verification code</label>
+              <input id="edit-account-email-otp" className="settings-input otp-input" type="text" inputMode="numeric" maxLength={6} placeholder="6-digit code" value={emailOtp} onChange={(event) => setEmailOtp(event.target.value)} required />
+            </>
+          )}
           <button className="account-submit-btn" type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving...' : 'Save details'}
           </button>
@@ -283,6 +360,19 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       <button className="account-submit-btn" type="button" onClick={handleSaveProfileImage} disabled={isSubmitting}>
         {isSubmitting ? 'Saving...' : 'Save profile picture'}
       </button>
+
+      {!currentUser?.hasPassword && (
+        <form className="account-details-form" onSubmit={handleAddProfilePassword}>
+          <p className="account-form-note">Add a password to make future logins more secure.</p>
+          <label className="settings-label" htmlFor="profile-password">New password</label>
+          <input id="profile-password" className="settings-input" type="password" placeholder="At least 8 characters" value={profilePassword} onChange={(event) => setProfilePassword(event.target.value)} minLength={8} required />
+          <label className="settings-label" htmlFor="profile-password-confirm">Confirm password</label>
+          <input id="profile-password-confirm" className="settings-input" type="password" placeholder="Re-enter your password" value={profilePasswordConfirm} onChange={(event) => setProfilePasswordConfirm(event.target.value)} minLength={8} required />
+          <button className="account-submit-btn" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Adding password...' : 'Add password'}
+          </button>
+        </form>
+      )}
 
       <button className="account-logout-btn" type="button" onClick={handleLogout}>
         Log out
@@ -353,15 +443,30 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
         ) : mode === 'reset' ? (
           resetStep === 'phone' ? (
             <form className="account-form" onSubmit={handleRequestPasswordReset}>
-              <p className="account-form-note">Enter your registered phone number to receive a verification code.</p>
-              <label className="settings-label" htmlFor="reset-phone">Phone number</label>
-              <input id="reset-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={resetPhone} onChange={(event) => setResetPhone(event.target.value)} required autoFocus />
-              <button className="account-submit-btn" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Sending code...' : 'Send verification code'}</button>
+              <p className="account-form-note">Choose where to receive your verification code.</p>
+              {resetError && <p className="account-form-error">{resetError}</p>}
+              <div className="reset-channel-options" role="group" aria-label="Verification delivery method">
+                <button type="button" className={resetChannel === 'email' ? 'selected' : ''} onClick={() => setResetChannel('email')}>Email</button>
+                <button type="button" className={resetChannel === 'phone' ? 'selected' : ''} onClick={() => setResetChannel('phone')}>SMS</button>
+              </div>
+              {resetChannel === 'email' ? (
+                <>
+                  <label className="settings-label" htmlFor="reset-email">Email address</label>
+                  <input id="reset-email" className="settings-input" type="email" placeholder="you@example.com" value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} required autoFocus />
+                </>
+              ) : (
+                <>
+                  <label className="settings-label" htmlFor="reset-phone">Phone number</label>
+                  <input id="reset-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={resetPhone} onChange={(event) => setResetPhone(event.target.value)} required autoFocus />
+                </>
+              )}
+              <button className="account-submit-btn" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Sending code...' : `Send code by ${resetChannel === 'email' ? 'email' : 'SMS'}`}</button>
+              {resetError && <button className="account-text-btn" type="button" onClick={() => { setResetError(''); setMode('login'); }}>Skip for now and return to log in</button>}
               <button className="account-text-btn" type="button" onClick={() => setMode('login')}>Back to log in</button>
             </form>
           ) : (
             <form className="account-form" onSubmit={handleResetPassword}>
-              <p className="account-form-note">Enter the code sent to your phone and choose a new password.</p>
+              <p className="account-form-note">Enter the code sent to your {resetChannel === 'email' ? 'email' : 'phone'} and choose a new password.</p>
               <label className="settings-label" htmlFor="reset-otp">Verification code</label>
               <input id="reset-otp" className="settings-input otp-input" type="text" inputMode="numeric" maxLength={6} placeholder="6-digit code" value={resetOtp} onChange={(event) => setResetOtp(event.target.value)} required autoFocus />
               <label className="settings-label" htmlFor="reset-password">New password</label>

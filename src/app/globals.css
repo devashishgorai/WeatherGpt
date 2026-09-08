@@ -1887,6 +1887,35 @@ body {
 
 .account-form { display: flex; flex-direction: column; }
 .account-form-note { margin-bottom: 14px; }
+.account-form-error {
+  margin: 0 0 12px;
+  color: #B42318;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.reset-channel-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.reset-channel-options button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #FFFFFF;
+  color: var(--text-light);
+  padding: 9px;
+  font: 600 12px var(--font-family);
+  cursor: pointer;
+}
+
+.reset-channel-options button.selected {
+  border-color: var(--primary);
+  background: #F3F7FF;
+  color: var(--primary);
+}
 
 .account-profile-panel {
   display: flex;
@@ -2162,20 +2191,39 @@ body {
   .main-viewport { width: 100%; }
   .main-header {
     padding-left: 58px;
+    padding-top: 10px;
+    padding-bottom: 10px;
     gap: 8px;
     padding-right: 12px;
+    flex-wrap: wrap;
+  }
+  .header-left-info {
+    flex: 1 1 calc(100% - 48px);
+    min-width: 0;
+  }
+  .header-city-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .header-actions-group {
+    flex: 1 1 100%;
+    justify-content: flex-end;
     gap: 6px;
   }
   .header-btn {
-    padding: 6px 8px;
+    flex: 1 1 0;
+    min-height: 38px;
+    min-width: 0;
+    padding: 6px 10px;
     font-size: 11px;
+    justify-content: center;
+    white-space: nowrap;
   }
   .account-icon-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
   }
   .message-content-wrapper { max-width: 88%; }
   .compare-cities-grid { grid-template-columns: 1fr; }

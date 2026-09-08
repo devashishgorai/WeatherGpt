@@ -25,10 +25,17 @@ function getServiceSid() {
 }
 
 export async function sendVerificationCode(phone) {
-  return withTimeout(getTwilioClient().verify.v2.services(getServiceSid()).verifications.create({
+  try {
+    return await withTimeout(getTwilioClient().verify.v2.services(getServiceSid()).verifications.create({
     to: phone,
     channel: 'sms',
-  }), 'verification');
+    }), 'verification');
+  } catch (error) {
+    const wrappedError = new Error(error?.message || 'Twilio verification request failed.');
+    wrappedError.code = error?.code;
+    wrappedError.status = error?.status;
+    throw wrappedError;
+  }
 }
 
 export async function checkVerificationCode(phone, code) {
