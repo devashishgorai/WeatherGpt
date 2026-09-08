@@ -4,6 +4,7 @@ import User from '@/models/User';
 import { setSessionCookie } from '@/lib/auth';
 import { normalizePhone, isValidPhone } from '@/lib/phone';
 import { blindIndex, decryptPrivateData, encryptPrivateData } from '@/lib/privateData';
+import { sendWelcomeEmail } from '@/lib/mailer';
 
 const CATEGORIES = ['farmer', 'fisherman', 'disaster_manager', 'citizen', 'other'];
 
@@ -17,6 +18,7 @@ function safeUser(user) {
     id: String(user._id),
     name: decryptPrivateData(user.nameEncrypted),
     phone: decryptPrivateData(user.phoneEncrypted),
+    email: user.emailEncrypted ? decryptPrivateData(user.emailEncrypted) : '',
     category: user.category,
     customCategory: user.customCategory,
     profileImage: user.profileImage || '',
@@ -61,7 +63,7 @@ export async function POST(request) {
       return NextResponse.json({ message: 'The signup request was not valid JSON.' }, { status: 400 });
     }
 
-    const { name, phone, category, customCategory, profileImage } = body || {};
+    const { name, phone, email, category, customCategory, profileImage } = body || {};
 
     if (!name || !phone || !category) {
       return NextResponse.json(
@@ -80,6 +82,11 @@ export async function POST(request) {
     const normalizedPhone = normalizePhone(phone);
     if (!isValidPhone(normalizedPhone)) {
       return NextResponse.json({ message: 'Please provide a valid phone number.' }, { status: 400 });
+    }
+
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return NextResponse.json({ message: 'Please provide a valid email address.' }, { status: 400 });
     }
 
     if (!CATEGORIES.includes(category)) {
@@ -102,10 +109,18 @@ export async function POST(request) {
       );
     }
 
+    if (normalizedEmail) {
+      const existingEmail = await User.findOne({ emailHash: blindIndex(normalizedEmail) }).select('+emailHash');
+      if (existingEmail) {
+        return NextResponse.json({ message: 'An account with this email address already exists.' }, { status: 409 });
+      }
+    }
+
     const user = await User.create({
       nameEncrypted: encryptPrivateData(name.trim()),
       phoneEncrypted: encryptPrivateData(normalizedPhone),
       phoneHash,
+      ...(normalizedEmail ? { emailEncrypted: encryptPrivateData(normalizedEmail), emailHash: blindIndex(normalizedEmail) } : {}),
       profileImage: typeof profileImage === 'string' ? profileImage.trim() : '',
       category,
       ...(category === 'other' ? { customCategory: customCategory.trim() } : {}),
@@ -113,6 +128,13 @@ export async function POST(request) {
 
     const response = NextResponse.json({ success: true, message: 'Account created successfully.', user: safeUser(user) }, { status: 201 });
     setSessionCookie(response, user._id);
+    if (normalizedEmail) {
+      try {
+        await sendWelcomeEmail({ to: normalizedEmail, name: name.trim() });
+      } catch (emailError) {
+        console.error('Welcome email failed:', emailError?.message || emailError);
+      }
+    }
     return response;
   } catch (error) {
     if (error?.code === 11000) {

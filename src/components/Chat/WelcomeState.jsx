@@ -4,7 +4,9 @@ import { PERSONA_CONFIG } from '@/lib/constants';
 
 export default function WelcomeState({ currentLoc, i18n, selectedPersona, onSelectStarter }) {
   const roleConfig = PERSONA_CONFIG[selectedPersona] || PERSONA_CONFIG.citizen;
-  const starterCards = roleConfig.starterCards?.length ? roleConfig.starterCards : (i18n.starters || []);
+  const starterCards = i18n.starters?.length
+    ? i18n.starters
+    : (roleConfig.starterCards?.length ? roleConfig.starterCards : []);
 
   return (
     <div className="welcome-container">

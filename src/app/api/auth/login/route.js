@@ -11,6 +11,7 @@ function safeUser(user) {
     id: String(user._id),
     name: decryptPrivateData(user.nameEncrypted),
     phone: decryptPrivateData(user.phoneEncrypted),
+    email: user.emailEncrypted ? decryptPrivateData(user.emailEncrypted) : '',
     category: user.category,
     customCategory: user.customCategory,
     profileImage: user.profileImage || '',

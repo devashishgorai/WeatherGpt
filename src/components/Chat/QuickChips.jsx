@@ -3,7 +3,7 @@
 import { PERSONA_CONFIG } from '@/lib/constants';
 
 export default function QuickChips({ selectedPersona, i18n, onChipClick }) {
-  const chips = PERSONA_CONFIG[selectedPersona]?.suggestedQuestions || i18n.chips?.[selectedPersona] || [];
+  const chips = i18n.chips?.[selectedPersona] || PERSONA_CONFIG[selectedPersona]?.suggestedQuestions || [];
   if (!chips || chips.length === 0) return null;
 
   return (

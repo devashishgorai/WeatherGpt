@@ -14,14 +14,21 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [category, setCategory] = useState('citizen');
   const [customCategory, setCustomCategory] = useState('');
   const [profileImage, setProfileImage] = useState('');
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setProfileImage(currentUser?.profileImage || '');
+    setEditName(currentUser?.name || '');
+    setEditEmail(currentUser?.email || '');
+    setIsEditingDetails(false);
   }, [currentUser, isOpen]);
 
   if (!isOpen) return null;
@@ -40,6 +47,7 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
         body: JSON.stringify({
           name,
           phone,
+          email,
           category,
           customCategory: category === 'other' ? customCategory : '',
           profileImage: profileImage.trim(),
@@ -59,6 +67,7 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       setMode('login');
       setName('');
       setPhone('');
+      setEmail('');
       setCategory('citizen');
       setCustomCategory('');
       setProfileImage('');
@@ -122,6 +131,31 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
     }
   };
 
+  const handleSaveDetails = async (event) => {
+    event.preventDefault();
+    if (!currentUser) return;
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName, email: editEmail })
+      });
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.message || 'Unable to update account details.');
+
+      onAuthSuccess({ ...currentUser, ...result.user });
+      setIsEditingDetails(false);
+      showToast('Account details updated.');
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/auth/logout', { method: 'POST' });
@@ -163,7 +197,28 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
           <div className="account-profile-name">{currentUser?.name || 'My account'}</div>
           <div className="account-profile-phone">{currentUser?.phone || ''}</div>
         </div>
+        <button
+          className="account-edit-btn"
+          type="button"
+          onClick={() => setIsEditingDetails((isEditing) => !isEditing)}
+          aria-label={isEditingDetails ? 'Close account details editor' : 'Edit account details'}
+          title={isEditingDetails ? 'Close editor' : 'Edit account details'}
+        >
+          ⚙
+        </button>
       </div>
+
+      {isEditingDetails && (
+        <form className="account-details-form" onSubmit={handleSaveDetails}>
+          <label className="settings-label" htmlFor="edit-account-name">Name</label>
+          <input id="edit-account-name" className="settings-input" type="text" value={editName} onChange={(event) => setEditName(event.target.value)} required />
+          <label className="settings-label" htmlFor="edit-account-email">Gmail or email address <span className="optional-field">(optional)</span></label>
+          <input id="edit-account-email" className="settings-input" type="email" placeholder="you@gmail.com" value={editEmail} onChange={(event) => setEditEmail(event.target.value)} />
+          <button className="account-submit-btn" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save details'}
+          </button>
+        </form>
+      )}
 
       <label className="account-upload-btn">
         <input type="file" accept="image/*" onChange={handleProfileImageSelection} />
@@ -186,6 +241,8 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
       <input id="account-name" className="settings-input" type="text" placeholder="Your name" value={name} onChange={(event) => setName(event.target.value)} required />
       <label className="settings-label" htmlFor="account-phone">Phone number</label>
       <input id="account-phone" className="settings-input" type="tel" placeholder="10-digit phone number" value={phone} onChange={(event) => setPhone(event.target.value)} required />
+      <label className="settings-label" htmlFor="account-email">Gmail or email address <span className="optional-field">(optional)</span></label>
+      <input id="account-email" className="settings-input" type="email" placeholder="you@gmail.com" value={email} onChange={(event) => setEmail(event.target.value)} />
       <span className="settings-label">Choose your category</span>
       <div className="category-slides" role="radiogroup" aria-label="Choose your category">
         {categories.map((item) => (

@@ -1809,6 +1809,19 @@ body {
   color: var(--text);
 }
 
+.optional-field { font-weight: 400; color: var(--text-light); }
+
+.admin-email-page { min-height: 100vh; padding: 48px 20px; background: var(--bg); }
+.admin-email-form { max-width: 560px; margin: 0 auto; padding: 28px; background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.admin-email-form h1 { margin: 0 0 8px; color: var(--text); font-size: 24px; }
+.admin-email-form p { margin: 0 0 22px; color: var(--text-light); font-size: 13px; line-height: 1.5; }
+.admin-email-form label { display: block; margin: 14px 0 6px; color: var(--text); font-size: 12px; font-weight: 700; }
+.admin-email-form input, .admin-email-form textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font: 13px var(--font-family); outline: none; resize: vertical; }
+.admin-email-form input:focus, .admin-email-form textarea:focus { border-color: var(--primary); }
+.admin-email-form button { width: 100%; margin-top: 20px; padding: 11px 16px; border: 0; border-radius: var(--radius-sm); background: var(--primary); color: #FFFFFF; font: 700 13px var(--font-family); cursor: pointer; }
+.admin-email-form button:disabled { opacity: 0.6; cursor: wait; }
+.admin-email-form [role='status'] { margin: 14px 0 0; }
+
 .settings-input {
   width: 100%;
   padding: 10px 12px;
@@ -1907,6 +1920,30 @@ body {
   font-size: 12px;
   color: var(--text-light);
   margin-top: 2px;
+}
+
+.account-edit-btn {
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: #FFFFFF;
+  color: var(--text-light);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.account-edit-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.account-details-form {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #F8FAFD;
 }
 
 .account-upload-btn {
