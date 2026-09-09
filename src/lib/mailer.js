@@ -32,16 +32,16 @@ export async function sendWelcomeEmail({ to, name }) {
 export async function sendPasswordResetOtp({ to, otp }) {
   return sendEmail(
     to,
-    'Your WeatherGPT password reset code',
-    `<p>Your WeatherGPT verification code is:</p><p style="font-size:24px;font-weight:700;letter-spacing:4px">${otp}</p><p>This code expires in 5 minutes. If you did not request a password reset, you can ignore this email.</p>`,
+    'WeatherGPT password reset code',
+    `<p>Your WeatherGPT password reset code is:</p><p><strong>${otp}</strong></p><p>This code expires soon. If you did not request it, you can ignore this email.</p>`,
   );
 }
 
 export async function sendEmailVerificationOtp({ to, otp }) {
   return sendEmail(
     to,
-    'Verify your WeatherGPT email address',
-    `<p>Your WeatherGPT email verification code is:</p><p style="font-size:24px;font-weight:700;letter-spacing:4px">${otp}</p><p>This code expires in 5 minutes.</p>`,
+    'Verify your WeatherGPT email',
+    `<p>Your WeatherGPT email verification code is:</p><p><strong>${otp}</strong></p><p>This code expires soon.</p>`,
   );
 }
 

@@ -78,6 +78,78 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.pwa-install-prompt {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 14px 16px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-deep);
+}
+
+.pwa-install-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-light);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.pwa-install-copy strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.pwa-install-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pwa-install-button,
+.pwa-dismiss-button {
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font: 700 12px var(--font-family);
+  cursor: pointer;
+}
+
+.pwa-install-button {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #FFFFFF;
+}
+
+.pwa-dismiss-button {
+  border: 1px solid var(--border);
+  background: #FFFFFF;
+  color: var(--text-light);
+}
+
+@media (max-width: 560px) {
+  .pwa-install-prompt {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    display: block;
+  }
+
+  .pwa-install-actions {
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+}
+
 #root, main {
   height: 100%;
   width: 100%;

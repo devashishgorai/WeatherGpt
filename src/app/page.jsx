@@ -31,6 +31,7 @@ import AccountModal from '@/components/Modals/AccountModal';
 import AlertBanner from '@/components/UI/AlertBanner';
 import Toast from '@/components/UI/Toast';
 import ErrorBoundary from '@/components/UI/ErrorBoundary';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 function getCurrentTimestamp() {
   return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -485,6 +486,7 @@ export default function WeatherGptHome() {
   return (
     <ErrorBoundary>
       <div className="app-wrapper">
+        <PWAInstallPrompt />
         {/* GPS Permission / Signal Acquisition Overlay */}
         <GpsOverlay
           gpsState={gpsState}
