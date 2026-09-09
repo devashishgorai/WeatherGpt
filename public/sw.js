@@ -45,3 +45,31 @@ self.addEventListener('fetch', (event) => {
     }),
   );
 });
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { title: 'WeatherGPT', body: event.data?.text() || 'New weather update.' };
+  }
+  event.waitUntil(self.registration.showNotification(payload.title || 'WeatherGPT', {
+    body: payload.body || 'New weather update.',
+    icon: payload.icon || '/icons/weatherGPT logo.png',
+    badge: payload.badge || '/icons/weatherGPT logo.png',
+    tag: payload.tag || 'weathergpt-weather',
+    data: payload.data || { url: '/' },
+    actions: payload.actions || [{ action: 'view-weather', title: 'View Weather' }, { action: 'dismiss', title: 'Dismiss' }],
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  if (event.action === 'dismiss') return;
+  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    const existing = clientList.find((client) => 'focus' in client);
+    if (existing) return existing.focus();
+    return clients.openWindow(targetUrl);
+  }));
+});

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const categories = [
   { value: 'farmer', label: 'Farmer', icon: '🌾' },
@@ -36,6 +36,11 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
   const [profilePassword, setProfilePassword] = useState('');
   const [profilePasswordConfirm, setProfilePasswordConfirm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cropSource, setCropSource] = useState('');
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropX, setCropX] = useState(50);
+  const [cropY, setCropY] = useState(50);
+  const cropImageRef = useRef(null);
 
   useEffect(() => {
     setProfileImage(currentUser?.profileImage || '');
@@ -300,15 +305,39 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
   const handleProfileImageSelection = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
+    if (!file.type.startsWith('image/')) {
+      showToast('Please choose an image file.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      setProfileImage(result);
-      const nextUser = currentUser ? { ...currentUser, profileImage: result } : null;
-      if (nextUser) onAuthSuccess(nextUser);
+      setCropSource(typeof reader.result === 'string' ? reader.result : '');
+      setCropZoom(1);
+      setCropX(50);
+      setCropY(50);
     };
     reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  const handleApplyCrop = () => {
+    const image = cropImageRef.current;
+    if (!image) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    const scale = Math.max(512 / image.naturalWidth, 512 / image.naturalHeight) * cropZoom;
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    const left = (512 - width) * (cropX / 100);
+    const top = (512 - height) * (cropY / 100);
+    context.drawImage(image, left, top, width, height);
+    const result = canvas.toDataURL('image/jpeg', 0.86);
+    setProfileImage(result);
+    const nextUser = currentUser ? { ...currentUser, profileImage: result } : null;
+    if (nextUser) onAuthSuccess(nextUser);
+    setCropSource('');
   };
 
   const renderAuthenticatedProfile = () => (
@@ -354,7 +383,7 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
 
       <label className="account-upload-btn">
         <input type="file" accept="image/*" onChange={handleProfileImageSelection} />
-        Add image from gallery
+        {profileImage || currentUser?.profileImage ? 'Change profile picture' : 'Add profile picture'}
       </label>
 
       <button className="account-submit-btn" type="button" onClick={handleSaveProfileImage} disabled={isSubmitting}>
@@ -492,6 +521,37 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
           </form>
         )}
       </div>
+      {cropSource && (
+        <div className="profile-crop-backdrop" onClick={() => setCropSource('')}>
+          <div className="profile-crop-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="compare-modal-header">
+              <h2 className="compare-modal-title">Crop profile picture</h2>
+              <button className="compare-modal-close" type="button" onClick={() => setCropSource('')} aria-label="Close crop editor">✕</button>
+            </div>
+            <div className="profile-crop-frame">
+              <img
+                ref={cropImageRef}
+                src={cropSource}
+                alt="Profile crop preview"
+                style={{ transform: `scale(${cropZoom})`, objectPosition: `${cropX}% ${cropY}%` }}
+              />
+          </div>
+            <label className="profile-crop-control">Zoom
+              <input type="range" min="1" max="3" step="0.05" value={cropZoom} onChange={(event) => setCropZoom(Number(event.target.value))} />
+            </label>
+            <label className="profile-crop-control">Horizontal position
+              <input type="range" min="0" max="100" value={cropX} onChange={(event) => setCropX(Number(event.target.value))} />
+            </label>
+            <label className="profile-crop-control">Vertical position
+              <input type="range" min="0" max="100" value={cropY} onChange={(event) => setCropY(Number(event.target.value))} />
+            </label>
+            <div className="settings-actions">
+              <button className="header-btn" type="button" onClick={() => setCropSource('')}>Cancel</button>
+              <button className="header-btn active" type="button" onClick={handleApplyCrop}>Use Cropped Photo</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -659,6 +659,14 @@ export default function WeatherGptHome() {
           currentUser={authenticatedUser}
         />
 
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          showToast={showToast}
+          currentLoc={currentLoc}
+          authenticatedUser={authenticatedUser}
+        />
+
         {/* Floating Toast */}
         <Toast message={toastMsg} />
       </div>

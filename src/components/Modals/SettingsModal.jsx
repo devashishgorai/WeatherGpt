@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { CONFIG } from '@/lib/config';
+import NotificationSettings from '@/components/Notifications/NotificationSettings';
 
-export default function SettingsModal({ isOpen, onClose, showToast }) {
+export default function SettingsModal({ isOpen, onClose, showToast, currentLoc, authenticatedUser }) {
   const [claudeKeyInput, setClaudeKeyInput] = useState(CONFIG.CLAUDE_API_KEY);
   const [geminiKeyInput, setGeminiKeyInput] = useState(CONFIG.GEMINI_API_KEY);
   const [openaiKeyInput, setOpenaiKeyInput] = useState(CONFIG.OPENAI_API_KEY);
@@ -33,6 +34,8 @@ export default function SettingsModal({ isOpen, onClose, showToast }) {
         <p className="settings-desc">
           Add your API key for Claude, Gemini, or OpenAI to unlock deep reasoning in native Indian languages. If left blank, the app uses its smart built-in localized persona engine.
         </p>
+
+        <NotificationSettings currentLoc={currentLoc} authenticatedUser={authenticatedUser} showToast={showToast} />
 
         <label className="settings-label">Anthropic Claude API Key (sk-ant-...)</label>
         <input
