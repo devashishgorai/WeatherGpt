@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
     "bcryptjs": "^2.4.3",
     "mongoose": "^8.24.4",
     "next": "^14.2.15",
