@@ -5,7 +5,8 @@ export const metadata = {
   description: 'WeatherGPT: AI-powered conversational weather assistant for India in authentic native Indian scripts: Hindi (हिंदी), Bengali (বাংলা), Tamil (தமிழ்), Telugu (తెలుగు), Marathi (मराठी), and English.',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/icon.svg',
+    icon: '/icons/weatherGPT%20logo.png',
+    apple: '/icons/weatherGPT%20logo.png',
   },
   appleWebApp: {
     capable: true,

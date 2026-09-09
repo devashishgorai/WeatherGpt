@@ -10,16 +10,16 @@
   "description": "AI-powered conversational weather assistant for India.",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icons/weatherGPT%20logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon.svg",
+      "src": "/icons/weatherGPT%20logo.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
