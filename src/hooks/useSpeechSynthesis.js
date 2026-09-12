@@ -8,12 +8,13 @@ export function useSpeechSynthesis(selectedLanguage) {
   const [activeSpeakingId, setActiveSpeakingId] = useState(null);
   const activeAudioRef = useRef(null);
   const speechControllerRef = useRef(null);
+  const playbackGenerationRef = useRef(0);
 
   const toggleListen = useCallback(async (msg) => {
     if (typeof window === 'undefined') return;
 
-    // 1. If currently speaking this message -> stop
-    if (activeSpeakingId === msg.id) {
+    const stopPlayback = () => {
+      playbackGenerationRef.current += 1;
       if (speechControllerRef.current) {
         speechControllerRef.current.cancel();
         speechControllerRef.current = null;
@@ -27,22 +28,17 @@ export function useSpeechSynthesis(selectedLanguage) {
         window.speechSynthesis.cancel();
       }
       setActiveSpeakingId(null);
+    };
+
+    // 1. If currently speaking this message -> stop
+    if (activeSpeakingId === msg.id) {
+      stopPlayback();
       return;
     }
 
     // 2. Stop any existing playback
-    if (speechControllerRef.current) {
-      speechControllerRef.current.cancel();
-      speechControllerRef.current = null;
-    }
-    if (activeAudioRef.current) {
-      activeAudioRef.current.pause();
-      activeAudioRef.current.src = '';
-      activeAudioRef.current = null;
-    }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    stopPlayback();
+    const playbackGeneration = playbackGenerationRef.current;
 
     setActiveSpeakingId(msg.id);
 
@@ -52,14 +48,23 @@ export function useSpeechSynthesis(selectedLanguage) {
         const cleanScript = cleanTextForSpeech(msg.content, selectedLanguage);
         const audio = await playOpenAiNeuralTts(cleanScript, selectedLanguage);
         if (audio) {
+          if (playbackGenerationRef.current !== playbackGeneration) {
+            audio.pause();
+            audio.src = '';
+            return;
+          }
           activeAudioRef.current = audio;
           audio.onended = () => {
-            setActiveSpeakingId(null);
-            activeAudioRef.current = null;
+            if (playbackGenerationRef.current === playbackGeneration) {
+              setActiveSpeakingId(null);
+              activeAudioRef.current = null;
+            }
           };
           audio.onerror = () => {
-            setActiveSpeakingId(null);
-            activeAudioRef.current = null;
+            if (playbackGenerationRef.current === playbackGeneration) {
+              setActiveSpeakingId(null);
+              activeAudioRef.current = null;
+            }
           };
           await audio.play();
           return;
@@ -71,12 +76,18 @@ export function useSpeechSynthesis(selectedLanguage) {
 
     // 4. Fluent Native Indian Audio Stream Player (Reads full Bengali, Hindi, Tamil, Telugu, Marathi, English)
     const controller = playNativeIndianSpeech(msg.content, selectedLanguage, () => {
-      setActiveSpeakingId(null);
-      speechControllerRef.current = null;
+      if (playbackGenerationRef.current === playbackGeneration) {
+        setActiveSpeakingId(null);
+        speechControllerRef.current = null;
+      }
     });
 
     if (controller) {
-      speechControllerRef.current = controller;
+      if (playbackGenerationRef.current === playbackGeneration) {
+        speechControllerRef.current = controller;
+      } else {
+        controller.cancel();
+      }
     } else {
       setActiveSpeakingId(null);
     }
