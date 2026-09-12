@@ -26,12 +26,12 @@ import SevenDayForecast from '@/components/Forecast/SevenDayForecast';
 import HourlyForecast from '@/components/Forecast/HourlyForecast';
 import GpsOverlay from '@/components/Modals/GpsOverlay';
 import CompareModal from '@/components/Modals/CompareModal';
-import SettingsModal from '@/components/Modals/SettingsModal';
 import AccountModal from '@/components/Modals/AccountModal';
 import AlertBanner from '@/components/UI/AlertBanner';
 import Toast from '@/components/UI/Toast';
 import ErrorBoundary from '@/components/UI/ErrorBoundary';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import NotificationSettings from '@/components/Notifications/NotificationSettings';
 
 function getCurrentTimestamp() {
   return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -106,16 +106,18 @@ export default function WeatherGptHome() {
   const [showTwentyFourHr, setShowTwentyFourHr] = useState(false);
   const [alertBannerDismissed, setAlertBannerDismissed] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // TTS Speech Hook
   const { activeSpeakingId, toggleListen } = useSpeechSynthesis(selectedLanguage);
 
-  const handleAuthSuccess = useCallback((user) => {
+  const handleAuthSuccess = useCallback((user, options = {}) => {
     setAuthenticatedUser(user);
     if (user?.category) {
       setSelectedPersona(user.category === 'disaster_manager' ? 'disaster' : user.category === 'other' ? 'citizen' : user.category);
+    }
+    if (options.interactive && user && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
     }
   }, []);
 
@@ -225,13 +227,12 @@ export default function WeatherGptHome() {
       }
       if (e.key === 'Escape') {
         if (isCompareOpen) setIsCompareOpen(false);
-        else if (isSettingsOpen) setIsSettingsOpen(false);
         else if (isAccountOpen) setIsAccountOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCompareOpen, isSettingsOpen, isAccountOpen, toggleMicrophone]);
+  }, [isCompareOpen, isAccountOpen, toggleMicrophone]);
 
   // Location Search Handler
   const handleLocationSuggestionSelect = useCallback((suggestion) => {
@@ -659,12 +660,10 @@ export default function WeatherGptHome() {
           currentUser={authenticatedUser}
         />
 
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          showToast={showToast}
+        <NotificationSettings
           currentLoc={currentLoc}
           authenticatedUser={authenticatedUser}
+          showToast={showToast}
         />
 
         {/* Floating Toast */}

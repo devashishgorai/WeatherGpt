@@ -83,7 +83,7 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
 
       if (!response.ok) throw new Error(result.message || `Signup request failed (HTTP ${response.status}).`);
       showToast(result.message || 'Account created successfully.');
-      onAuthSuccess(result.user);
+      onAuthSuccess(result.user, { interactive: true });
       onClose();
       setMode('login');
       setName('');
@@ -121,7 +121,7 @@ export default function AccountModal({ isOpen, onClose, showToast, onAuthSuccess
         return;
       }
       if (!response.ok) throw new Error(result.message || 'Unable to log in.');
-      onAuthSuccess(result.user);
+      onAuthSuccess(result.user, { interactive: true });
       onClose();
       showToast('Logged in successfully.');
     } catch (error) {
